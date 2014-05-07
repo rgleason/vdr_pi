@@ -75,6 +75,7 @@ public:
 
       void Notify();
       void SetInterval( int interval );
+      void SetPosiion( int position );
 
 //    The optional method overrides
       void SetNMEASentence( wxString &sentence );
@@ -104,12 +105,15 @@ private:
 class VDRControl : public wxWindow
 {
 public:
-      VDRControl( wxWindow *pparent, wxWindowID id, vdr_pi *vdr, int speed, int range );
+      VDRControl( wxWindow *pparent, wxWindowID id, vdr_pi *vdr, int speed, int position, int range );
       void SetColorScheme( PI_ColorScheme cs );
       void SetProgress( int progress );
+      wxSlider         *m_pos_slider;
+      wxStaticText     *itemStaticText03;
 
 private:
       void OnSliderUpdated( wxCommandEvent& event );
+      void OnPosSliderUpdated( wxCommandEvent& event);
 
       vdr_pi           *m_pvdr;
       wxSlider         *m_pslider;
