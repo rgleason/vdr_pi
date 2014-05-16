@@ -189,9 +189,10 @@ void vdr_pi::Notify()
             str = m_istream.GetFirstLine();
       else
             str = m_istream.GetNextLine();
-
+      if (str.StartsWith(_T("$")))
+      {
       PushNMEABuffer(str+_T("\r\n"));
-
+      }
       if ( m_pvdrcontrol )
             m_pvdrcontrol->SetProgress(pos);
 }
