@@ -214,40 +214,39 @@ void vdr_pi::SetInterval( int interval )
       }
 }
 
-void vdr_pi::SetPosiion( int position )
+void vdr_pi::SetPosition( int position )
 {
     wxString str;
     long line_count = m_istream.GetLineCount();
     long line_pos, des_line_pos;
 
-    if(position < 2){
-        Start( 100, wxTIMER_CONTINUOUS );
+    
+    line_pos = m_istream.GetCurrentLine();
+    des_line_pos = (position * line_count) / 100;
+
+    if (line_pos > des_line_pos)
+    {
+        str = m_istream.GetFirstLine();
+        line_pos = 1;
     }
-    else{
+
+    while (line_pos < des_line_pos)
+    {
+        str = m_istream.GetNextLine();
         line_pos = m_istream.GetCurrentLine();
-        des_line_pos = (position * line_count) / 100;
 
-        if (line_pos > des_line_pos)
+        if (line_pos > des_line_pos - 10)
         {
-            str = m_istream.GetFirstLine();
-            line_pos = 1;
+        PushNMEABuffer(str+_T("\r\n"));
         }
-
-        while (line_pos < des_line_pos)
-        {
-             str = m_istream.GetNextLine();
-             line_pos = m_istream.GetCurrentLine();
-
-             if (line_pos > des_line_pos - 10)
-             {
-             PushNMEABuffer(str+_T("\r\n"));
-
-             if ( m_pvdrcontrol )
-                    m_pvdrcontrol->SetProgress(line_pos);
-             }
-        }
-
     }
+
+    if ( m_pvdrcontrol ) {
+        m_pvdrcontrol->SetProgress(line_pos);
+        m_pvdrcontrol->m_pslider->SetValue(10);
+    }
+    m_interval = 100;
+    Start( m_interval, wxTIMER_CONTINUOUS );
 }
 
 int vdr_pi::GetToolbarToolCount(void)
@@ -436,5 +435,5 @@ void VDRControl::OnSliderUpdated( wxCommandEvent& event )
 
 void VDRControl::OnPosSliderUpdated( wxCommandEvent& event )
 {
-   m_pvdr->SetPosiion(m_pos_slider->GetValue());
+   m_pvdr->SetPosition(m_pos_slider->GetValue());
 }
