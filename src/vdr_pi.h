@@ -117,7 +117,8 @@ public:
       vdr_pi           *m_pvdr;
       wxSlider         *m_pslider;
       wxGauge          *m_pgauge;
-
+      wxTextCtrl	   *GPS_Date;
+      wxTextCtrl	   *GPS_Time;
 private:
       void OnSliderUpdated( wxCommandEvent& event );
       void OnPosSliderUpdated( wxCommandEvent& event);

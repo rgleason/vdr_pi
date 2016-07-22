@@ -30,12 +30,13 @@
 #include "wx/wxprec.h"
 
 #ifndef  WX_PRECOMP
-  #include "wx/wx.h"
+#include "wx/wx.h"
 #endif //precompiled headers
 
 #include <typeinfo>
 #include "vdr_pi.h"
 #include "icons.h"
+#include <wx/tokenzr.h>
 
 // the class factories, used to create and destroy instances of the PlugIn
 
@@ -182,17 +183,30 @@ void vdr_pi::SetAISSentence(wxString &sentence)
 
 void vdr_pi::Notify()
 {
-      wxString str;
-      int pos = m_istream.GetCurrentLine();
+      wxString str, vdr_date, vdr_time;
+      int pos = m_istream.GetCurrentLine(), i_tkn;
 
       if (m_istream.Eof() || pos==-1)
             str = m_istream.GetFirstLine();
       else
             str = m_istream.GetNextLine();
+
       if (str.StartsWith(_T("$")))
       {
-      PushNMEABuffer(str+_T("\r\n"));
-      }
+    	  if (str.StartsWith(_T("$GPRMC")))
+    	  {
+        	  wxStringTokenizer tkz( str, _(","));
+        	  vdr_time  = tkz.GetNextToken();
+        	  vdr_time  = tkz.GetNextToken();
+        	  m_pvdrcontrol->GPS_Time->SetValue( vdr_time );
+			  for (i_tkn= 0; i_tkn < 8; i_tkn++)
+						{
+							vdr_date  = tkz.GetNextToken();
+						}
+					  m_pvdrcontrol->GPS_Date->SetValue( vdr_date );
+    	  }
+    	  PushNMEABuffer(str+_T("\r\n"));
+	  }
       if ( m_pvdrcontrol )
             m_pvdrcontrol->SetProgress(pos);
 }
@@ -408,6 +422,16 @@ VDRControl::VDRControl( wxWindow *pparent, wxWindowID id, vdr_pi *vdr, int speed
       m_pos_slider->Connect( wxEVT_SCROLL_CHANGED,
           wxCommandEventHandler(VDRControl::OnPosSliderUpdated), NULL, this);
       m_pos_slider->Disable();
+
+      wxStaticText *itemStaticText04 = new wxStaticText( this, wxID_ANY, _("GPS Date:") );
+      topsizer->Add( itemStaticText04, 0, wxEXPAND|wxALL, 2 );
+      GPS_Date = new wxTextCtrl( this, wxID_ANY, _("None"));
+      topsizer->Add( GPS_Date, 0, wxALL|wxALIGN_LEFT, 5 );
+
+      wxStaticText *itemStaticText05 = new wxStaticText( this, wxID_ANY, _("    Time:") );
+      topsizer->Add( itemStaticText05, 0, wxEXPAND|wxALL, 2 );
+      GPS_Time = new wxTextCtrl( this, wxID_ANY, _("None"));
+      topsizer->Add( GPS_Time, 0, wxALL|wxALIGN_LEFT, 5 );
 
       SetSizer( topsizer );
       topsizer->Fit( this );
