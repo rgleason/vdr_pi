@@ -30,12 +30,13 @@
 #include "wx/wxprec.h"
 
 #ifndef  WX_PRECOMP
-  #include "wx/wx.h"
+#include "wx/wx.h"
 #endif //precompiled headers
 
 #include <typeinfo>
 #include "vdr_pi.h"
 #include "icons.h"
+#include <wx/tokenzr.h>
 
 // the class factories, used to create and destroy instances of the PlugIn
 
@@ -49,6 +50,10 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p)
     delete p;
 }
 
+enum {                                      // process ID's
+    wxEVT_SLIDER_UPDATED = 10000,
+    wxEVT_POS_SLIDER_UPDATED
+};
 
 
 
@@ -148,7 +153,7 @@ wxBitmap *vdr_pi::GetPlugInBitmap()
 
 wxString vdr_pi::GetCommonName()
 {
-      return _("VDR");
+      return _("VDR-Special");
 }
 
 
@@ -178,25 +183,84 @@ void vdr_pi::SetAISSentence(wxString &sentence)
 
 void vdr_pi::Notify()
 {
-      wxString str;
-      int pos = m_istream.GetCurrentLine();
+      wxString str, vdr_date, vdr_time;
+      int pos = m_istream.GetCurrentLine(), i_tkn;
 
       if (m_istream.Eof() || pos==-1)
             str = m_istream.GetFirstLine();
       else
             str = m_istream.GetNextLine();
 
-      PushNMEABuffer(str+_T("\r\n"));
-
+      if (str.StartsWith(_T("$")))
+      {
+    	  if (str.StartsWith(_T("$GPRMC")))
+    	  {
+        	  wxStringTokenizer tkz( str, _(","));
+        	  vdr_time  = tkz.GetNextToken();
+        	  vdr_time  = tkz.GetNextToken();
+        	  m_pvdrcontrol->GPS_Time->SetValue( vdr_time );
+			  for (i_tkn= 0; i_tkn < 8; i_tkn++)
+						{
+							vdr_date  = tkz.GetNextToken();
+						}
+					  m_pvdrcontrol->GPS_Date->SetValue( vdr_date );
+    	  }
+    	  PushNMEABuffer(str+_T("\r\n"));
+	  }
       if ( m_pvdrcontrol )
             m_pvdrcontrol->SetProgress(pos);
 }
 
 void vdr_pi::SetInterval( int interval )
 {
-      m_interval = interval;
+      m_interval = interval * 10; // .01-1 seconds
+      if(m_interval > 10){
+            m_pvdrcontrol->m_pos_slider->Disable();
+      }
+      else{
+            m_pvdrcontrol->m_pos_slider->Enable();
+            Stop();
+            }
+
       if ( IsRunning() ) // Timer started?
-            Start( m_interval, wxTIMER_CONTINUOUS ); // restart timer with new interval
+      {
+          Start( m_interval, wxTIMER_CONTINUOUS ); // restart timer with new interval            
+      }
+}
+
+void vdr_pi::SetPosition( int position )
+{
+    wxString str;
+    long line_count = m_istream.GetLineCount();
+    long line_pos, des_line_pos;
+
+    
+    line_pos = m_istream.GetCurrentLine();
+    des_line_pos = (position * line_count) / 100;
+
+    if (line_pos > des_line_pos)
+    {
+        str = m_istream.GetFirstLine();
+        line_pos = 1;
+    }
+
+    while (line_pos < des_line_pos)
+    {
+        str = m_istream.GetNextLine();
+        line_pos = m_istream.GetCurrentLine();
+
+        if (line_pos > des_line_pos - 10)
+        {
+        PushNMEABuffer(str+_T("\r\n"));
+        }
+    }
+
+    if ( m_pvdrcontrol ) {
+        m_pvdrcontrol->SetProgress(line_pos);
+        m_pvdrcontrol->m_pslider->SetValue(10);
+    }
+    m_interval = 100;
+    Start( m_interval, wxTIMER_CONTINUOUS );
 }
 
 int vdr_pi::GetToolbarToolCount(void)
@@ -208,7 +272,7 @@ void vdr_pi::OnToolbarToolCallback(int id)
 {
       if ( id == m_tb_item_id_play )
       {
-            if ( IsRunning() ) // Timer started?
+            if ( IsRunning() || m_istream.IsOpened() ) // Timer started?
             {
                   Stop(); // Stop timer
                   m_istream.Close();
@@ -234,15 +298,15 @@ void vdr_pi::OnToolbarToolCallback(int id)
                   m_ifilename = fdlg.GetPath();
 
                   m_istream.Open( m_ifilename );
-                  Start( m_interval, wxTIMER_CONTINUOUS ); // start timer
-      
+
                   if (! m_pvdrcontrol )
-                  {
-                        m_pvdrcontrol = new VDRControl( GetOCPNCanvasWindow(), wxID_ANY, this, 1000/m_interval, m_istream.GetLineCount() );
-                        wxAuiPaneInfo pane = wxAuiPaneInfo().Name(_T("VDR")).Caption(wxString::Format(_("VDR replay: %s"), fdlg.GetFilename())).CaptionVisible(true).Float().FloatingPosition(50,100).Dockable(false).Fixed().CloseButton(false).Show(true);
-                        m_pauimgr->AddPane( m_pvdrcontrol, pane );
-                        m_pauimgr->Update();
-                  }
+                      {
+                            Start( m_interval, wxTIMER_CONTINUOUS ); // start timer
+                            m_pvdrcontrol = new VDRControl( GetOCPNCanvasWindow(), wxID_ANY, this, m_interval, 1, m_istream.GetLineCount() );
+                            wxAuiPaneInfo pane = wxAuiPaneInfo().Name(_T("VDR")).Caption(wxString::Format(_("VDR replay: %s"), fdlg.GetFilename())).CaptionVisible(true).Float().FloatingPosition(50,100).Dockable(false).Fixed().CloseButton(false).Show(true);
+                            m_pauimgr->AddPane( m_pvdrcontrol, pane );
+                            m_pauimgr->Update();
+                      }
 
                   SetToolbarItemState( id, true );
             }
@@ -326,7 +390,7 @@ bool vdr_pi::SaveConfig(void)
 //
 //----------------------------------------------------------------
 
-VDRControl::VDRControl( wxWindow *pparent, wxWindowID id, vdr_pi *vdr, int speed, int range )
+VDRControl::VDRControl( wxWindow *pparent, wxWindowID id, vdr_pi *vdr, int speed, int position, int range )
       :wxWindow( pparent, id, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE, _T("Dashboard") ), m_pvdr(vdr)
 {
       wxColour cl;
@@ -336,18 +400,38 @@ VDRControl::VDRControl( wxWindow *pparent, wxWindowID id, vdr_pi *vdr, int speed
       wxFlexGridSizer *topsizer = new wxFlexGridSizer(2);
       topsizer->AddGrowableCol(1);
 
-      wxStaticText *itemStaticText01 = new wxStaticText( this, wxID_ANY, _("Speed:") );
+      wxStaticText *itemStaticText01 = new wxStaticText( this, wxID_ANY, _("Interval:") );
       topsizer->Add( itemStaticText01, 0, wxEXPAND|wxALL, 2 );
 
-      m_pslider = new wxSlider( this, wxID_ANY, speed, 1, 100, wxDefaultPosition, wxSize( 200, 20) );
+      m_pslider = new wxSlider( this, wxEVT_SLIDER_UPDATED, speed, 1, 100, wxDefaultPosition, wxSize( 200, 20) );
       topsizer->Add( m_pslider, 1, wxALL|wxEXPAND, 2 );
-      m_pslider->Connect( wxEVT_COMMAND_SLIDER_UPDATED, wxCommandEventHandler(VDRControl::OnSliderUpdated), NULL, this);
+      m_pslider->Connect( wxEVT_SCROLL_CHANGED,
+          wxCommandEventHandler(VDRControl::OnSliderUpdated), NULL, this);
 
       wxStaticText *itemStaticText02 = new wxStaticText( this, wxID_ANY, _("Progress:") );
       topsizer->Add( itemStaticText02, 0, wxEXPAND|wxALL, 2 );
 
       m_pgauge = new wxGauge( this, wxID_ANY, range, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
       topsizer->Add( m_pgauge, 1, wxALL|wxEXPAND, 2 );
+
+      wxStaticText *itemStaticText03 = new wxStaticText( this, wxID_ANY, _("Position:") );
+      topsizer->Add( itemStaticText03, 0, wxEXPAND|wxALL, 2 );
+
+      m_pos_slider = new wxSlider( this, wxEVT_POS_SLIDER_UPDATED, position, 1, 100, wxDefaultPosition, wxSize( 200, 20) );
+      topsizer->Add( m_pos_slider, 1, wxALL|wxEXPAND, 2 );
+      m_pos_slider->Connect( wxEVT_SCROLL_CHANGED,
+          wxCommandEventHandler(VDRControl::OnPosSliderUpdated), NULL, this);
+      m_pos_slider->Disable();
+
+      wxStaticText *itemStaticText04 = new wxStaticText( this, wxID_ANY, _("GPS Date:") );
+      topsizer->Add( itemStaticText04, 0, wxEXPAND|wxALL, 2 );
+      GPS_Date = new wxTextCtrl( this, wxID_ANY, _("None"));
+      topsizer->Add( GPS_Date, 0, wxALL|wxALIGN_LEFT, 5 );
+
+      wxStaticText *itemStaticText05 = new wxStaticText( this, wxID_ANY, _("    Time:") );
+      topsizer->Add( itemStaticText05, 0, wxEXPAND|wxALL, 2 );
+      GPS_Time = new wxTextCtrl( this, wxID_ANY, _("None"));
+      topsizer->Add( GPS_Time, 0, wxALL|wxALIGN_LEFT, 5 );
 
       SetSizer( topsizer );
       topsizer->Fit( this );
@@ -370,6 +454,10 @@ void VDRControl::SetProgress( int progress )
 
 void VDRControl::OnSliderUpdated( wxCommandEvent& event )
 {
-      m_pvdr->SetInterval( 1000/m_pslider->GetValue() );
+      m_pvdr->SetInterval( m_pslider->GetValue());
 }
 
+void VDRControl::OnPosSliderUpdated( wxCommandEvent& event )
+{
+   m_pvdr->SetPosition(m_pos_slider->GetValue());
+}

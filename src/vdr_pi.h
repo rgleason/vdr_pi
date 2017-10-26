@@ -68,6 +68,7 @@ public:
       int GetAPIVersionMinor();
       int GetPlugInVersionMajor();
       int GetPlugInVersionMinor();
+
       wxBitmap *GetPlugInBitmap();
       wxString GetCommonName();
       wxString GetShortDescription();
@@ -75,6 +76,7 @@ public:
 
       void Notify();
       void SetInterval( int interval );
+      void SetPosition( int position );
 
 //    The optional method overrides
       void SetNMEASentence( wxString &sentence );
@@ -83,16 +85,18 @@ public:
       void OnToolbarToolCallback( int id );
       void SetColorScheme( PI_ColorScheme cs );
 
+      VDRControl       *m_pvdrcontrol;
+
 private:
       bool LoadConfig( void );
       bool SaveConfig( void );
 
+      wxFileConfig     *m_pconfig;
+      wxAuiManager     *m_pauimgr;
+
       int               m_tb_item_id_record;
       int               m_tb_item_id_play;
 
-      wxFileConfig     *m_pconfig;
-      wxAuiManager     *m_pauimgr;
-      VDRControl       *m_pvdrcontrol;
       wxString          m_ifilename;
       wxString          m_ofilename;
       int               m_interval;
@@ -104,16 +108,22 @@ private:
 class VDRControl : public wxWindow
 {
 public:
-      VDRControl( wxWindow *pparent, wxWindowID id, vdr_pi *vdr, int speed, int range );
+      VDRControl( wxWindow *pparent, wxWindowID id, vdr_pi *vdr, int speed, int position, int range );
       void SetColorScheme( PI_ColorScheme cs );
       void SetProgress( int progress );
-
-private:
-      void OnSliderUpdated( wxCommandEvent& event );
+      wxSlider         *m_pos_slider;
+      wxStaticText     *itemStaticText03;
 
       vdr_pi           *m_pvdr;
       wxSlider         *m_pslider;
       wxGauge          *m_pgauge;
+      wxTextCtrl	   *GPS_Date;
+      wxTextCtrl	   *GPS_Time;
+private:
+      void OnSliderUpdated( wxCommandEvent& event );
+      void OnPosSliderUpdated( wxCommandEvent& event);
+
+
 };
 
 #endif
