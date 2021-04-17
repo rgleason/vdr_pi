@@ -75,3 +75,8 @@ image::nmea-debug-dsc.png[]
 Uncheck “Calculate SOG” option in Preferences. See
 http://www.cruisersforum.com/forums/f134/playback-vdr-from-recorded-file-201359.html#post2635729[Playback
 from recorded file]
+
+==== How to Save Depth as you go?
+
+Pelagic's Record Depth using VDR Recorder and a helper program for conversion to GPS (NMEAtoXYZ-3a). See
+http://sailing-pelagia.blogspot.com/2021/03/saving-depths-as-you-go.html?m=0
