@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/ bin / bash
 
 path=$(dirname $0)
 
-# Require icotool from package icoutils
-# Require convert from package ImageMagick
-# Require inkscape
+#Require icotool from package icoutils
+#Require convert from package ImageMagick
+#Require inkscape
 
 # 32x32
 for pic in $path/vdr_pi.svg $path/vdr_record.svg $path/vdr_play.svg
@@ -14,10 +14,13 @@ do
 done
 
 # 20x20
-#for pic in 
+#for pic in
 #do
-#  echo "converting $pic"
-#  inkscape --without-gui --export-png=$path/$(basename $pic .svg ).png --export-dpi=72 --export-background-opacity=0 --export-width=20 --export-height=20 $pic >/dev/null
+#echo "converting $pic"
+#inkscape-- without - gui-- export - png =            \
+    $path / $(basename $pic.svg).png-- export - dpi = \
+        72 --export - background - opacity =          \
+            0 --export - width = 20 --export - height = 20 $pic> / dev / null
 #done
 
 $path/../../../src/bitmaps/png2wx.pl -C $path/icons.cpp -H $path/icons.h -M ICONS_H $path/*.png
