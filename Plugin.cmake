@@ -52,6 +52,8 @@ set(SRC
   src/icons.cpp
   src/vdr_pi.h
   src/vdr_pi.cpp
+  src/vdr_pi_prefs.h
+  src/vdr_pi_prefs.cpp
 )
 
 
