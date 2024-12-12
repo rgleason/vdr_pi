@@ -81,14 +81,24 @@ vdr_pi::vdr_pi(void* ppimgr) : opencpn_plugin_117(ppimgr), wxTimer(this) {
     wxLogWarning("VDR panel icon has NOT been loaded");
 
   m_pvdrcontrol = NULL;
-  m_recording = false;
-  m_data_format = VDRDataFormat::RawNMEA;
+
+  // Initialize configuration parameters
   m_interval = 1000;  // Default 1 second interval
   m_log_rotate = false;
   m_log_rotate_interval = 24;
+  m_auto_start_recording = false;
+  m_auto_recording_active = false;
+  m_speed_threshold = 0.5;  // Default 0.5 knots
+  m_stop_delay = 10;        // Default 10 minutes
+  m_data_format = VDRDataFormat::RawNMEA;
+
+  // Runtime variables
+  m_recording = false;
   m_is_csv_file = false;
   m_timestamp_idx = -1;
   m_message_idx = -1;
+  m_last_speed = 0.0;
+  m_auto_recording_active = false;
 }
 
 int vdr_pi::Init(void) {
@@ -100,6 +110,15 @@ int vdr_pi::Init(void) {
 
   // Load the configuration items
   LoadConfig();
+
+  // If auto-start is enabled and we're not playing back and not using speed
+  // threshold, start recording after initialization.
+  if (m_auto_start_recording && !m_use_speed_threshold && !IsPlaying()) {
+    wxLogMessage(_T("VDR: Auto-starting recording on plugin initialization"));
+    StartRecording();
+    SetToolbarToolStatus(m_tb_item_id_record, true);
+    m_auto_recording_active = true;
+  }
 
 #ifdef VDR_USE_SVG
   m_tb_item_id_record =
@@ -214,9 +233,33 @@ wxString vdr_pi::FormatNMEAAsCSV(const wxString& nmea) {
 }
 
 void vdr_pi::SetNMEASentence(wxString& sentence) {
+  // Check for RMC sentence to get speed
+  if (sentence.StartsWith("$GPRMC") || sentence.StartsWith("$GNRMC")) {
+    wxStringTokenizer tkz(sentence, wxT(","));
+    wxString token;
+
+    // Skip to speed field (field 7)
+    for (int i = 0; i < 7 && tkz.HasMoreTokens(); i++) {
+      token = tkz.GetNextToken();
+    }
+
+    if (tkz.HasMoreTokens()) {
+      token = tkz.GetNextToken();
+      if (!token.IsEmpty()) {
+        double speed;
+        if (token.ToDouble(&speed)) {
+          // Convert from knots to desired units if needed
+          m_last_speed = speed;
+          CheckAutoRecording(speed);
+        }
+      }
+    }
+  }
+
+  // Only record if recording is active (whether manual or automatic)
   if (!m_recording) return;
 
-  // Check if we need to rotate the VDR file.
+  // Check if we need to rotate the VDR file
   CheckLogRotation();
 
   switch (m_data_format) {
@@ -232,6 +275,66 @@ void vdr_pi::SetNMEASentence(wxString& sentence) {
 
 void vdr_pi::SetAISSentence(wxString& sentence) {
   SetNMEASentence(sentence);  // Handle the same way as NMEA
+}
+
+/**
+ * Check if auto-recording should be started or stopped based.
+ *
+ * Don't auto-record if:
+ * 1. Auto-recording is disabled
+ * 2. Manual recording is active (not auto-recording)
+ * 3. Playback is active
+ */
+void vdr_pi::CheckAutoRecording(double speed) {
+  if ((m_recording && !m_auto_recording_active) || IsPlaying()) {
+    return;
+  }
+
+  // If we're not using speed threshold, nothing to check.
+  if (!m_use_speed_threshold) {
+    return;
+  }
+
+  if (speed >= m_speed_threshold) {
+    // Reset the below-threshold timer when speed goes above threshold
+    m_below_threshold_since = wxDateTime();
+
+    if (!m_auto_recording_active) {
+      // Start recording
+      wxLogMessage(
+          _T("VDR: Auto-starting recording - speed %.2f exceeds threshold ")
+          _T("%.2f"),
+          speed, m_speed_threshold);
+      StartRecording();
+      m_auto_recording_active = true;
+      SetToolbarToolStatus(m_tb_item_id_record, true);
+    }
+  } else if (speed < m_speed_threshold && m_auto_recording_active) {
+    // Add hysteresis to prevent rapid starting/stopping
+    static const double HYSTERESIS = 0.2;  // 0.2 knots below threshold
+    if (speed < (m_speed_threshold - HYSTERESIS)) {
+      // Check if this is the first time we've gone below threshold
+      if (!m_below_threshold_since.IsValid()) {
+        m_below_threshold_since = wxDateTime::Now();
+        wxLogMessage(
+            _T("VDR: Speed dropped below threshold, starting stop delay ")
+            _T("timer"));
+      } else {
+        // Check if enough time has passed
+        wxTimeSpan timeBelow = wxDateTime::Now() - m_below_threshold_since;
+        if (timeBelow.GetMinutes() >= m_stop_delay) {
+          wxLogMessage(
+              _T("VDR: Auto-stopping recording - speed %.2f below threshold ")
+              _T("%.2f for %d minutes"),
+              speed, m_speed_threshold, m_stop_delay);
+          StopRecording();
+          m_auto_recording_active = false;
+          SetToolbarToolStatus(m_tb_item_id_record, false);
+          m_below_threshold_since = wxDateTime();  // Reset timer
+        }
+      }
+    }
+  }
 }
 
 bool vdr_pi::IsNMEAOrAIS(const wxString& line) {
@@ -535,6 +638,10 @@ bool vdr_pi::LoadConfig(void) {
   pConf->Read(_T("Interval"), &m_interval, 1000);
   pConf->Read(_T("LogRotate"), &m_log_rotate, false);
   pConf->Read(_T("LogRotateInterval"), &m_log_rotate_interval, 24);
+  pConf->Read(_T("AutoStartRecording"), &m_auto_start_recording, false);
+  pConf->Read(_T("UseSpeedThreshold"), &m_use_speed_threshold, false);
+  pConf->Read(_T("SpeedThreshold"), &m_speed_threshold, 0.5);
+  pConf->Read(_T("StopDelay"), &m_stop_delay, 10);  // Default 10 minutes
 
   int format;
   pConf->Read(_T("DataFormat"), &format,
@@ -556,6 +663,10 @@ bool vdr_pi::SaveConfig(void) {
   pConf->Write(_T("Interval"), m_interval);
   pConf->Write(_T("LogRotate"), m_log_rotate);
   pConf->Write(_T("LogRotateInterval"), m_log_rotate_interval);
+  pConf->Write(_T("AutoStartRecording"), m_auto_start_recording);
+  pConf->Write(_T("UseSpeedThreshold"), m_use_speed_threshold);
+  pConf->Write(_T("SpeedThreshold"), m_speed_threshold);
+  pConf->Write(_T("StopDelay"), m_stop_delay);
   pConf->Write(_T("DataFormat"), static_cast<int>(m_data_format));
 
   return true;
@@ -563,6 +674,12 @@ bool vdr_pi::SaveConfig(void) {
 
 void vdr_pi::StartRecording() {
   if (m_recording) return;
+
+  // Don't start recording if playback is active
+  if (IsPlaying()) {
+    wxLogMessage(_T("VDR: Cannot start recording while playback is active"));
+    return;
+  }
 
   // Generate filename based on current date/time
   wxString filename = GenerateFilename();
@@ -598,6 +715,7 @@ void vdr_pi::StartRecording() {
   }
 
   m_recording = true;
+  m_recording_start = wxDateTime::Now();
 }
 
 void vdr_pi::StopRecording() {
@@ -605,6 +723,7 @@ void vdr_pi::StopRecording() {
 
   m_ostream.Close();
   m_recording = false;
+  m_auto_recording_active = false;
 
 #ifdef __ANDROID__
   AndroidSecureCopyFile(m_temp_outfile, m_final_outfile);
@@ -695,10 +814,18 @@ void vdr_pi::StopPlayback() {
 
 void vdr_pi::ShowPreferencesDialog(wxWindow* parent) {
   VDRPrefsDialog dlg(parent, wxID_ANY, m_data_format, m_recording_dir,
-                     m_log_rotate, m_log_rotate_interval);
+                     m_log_rotate, m_log_rotate_interval,
+                     m_auto_start_recording, m_use_speed_threshold,
+                     m_speed_threshold, m_stop_delay);
   if (dlg.ShowModal() == wxID_OK) {
     SetDataFormat(dlg.GetDataFormat());
     SetRecordingDir(dlg.GetRecordingDir());
+    SetLogRotate(dlg.GetLogRotate());
+    SetLogRotateInterval(dlg.GetLogRotateInterval());
+    SetAutoStartRecording(dlg.GetAutoStartRecording());
+    SetUseSpeedThreshold(dlg.GetUseSpeedThreshold());
+    SetSpeedThreshold(dlg.GetSpeedThreshold());
+    SetStopDelay(dlg.GetStopDelay());
     SaveConfig();
 
     // Update UI if needed
