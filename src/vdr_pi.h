@@ -63,12 +63,15 @@ struct CSVField {
   bool required;  // Is this field required for playback?
 };
 
+/** Plugin class for the Voyage Data Recorder functionality. */
 class vdr_pi : public opencpn_plugin_117, wxTimer {
 public:
+  /** Creates a new VDR plugin instance. */
   vdr_pi(void* ppimgr);
 
-  //    The required PlugIn Methods
+  /** Initializes the plugin and sets up toolbar items. */
   int Init(void);
+  /** Cleans up resources and saves configuration. */
   bool DeInit(void);
 
   int GetAPIVersionMajor();
@@ -83,27 +86,39 @@ public:
   void Notify();
   void SetInterval(int interval);
 
-  //    The optional method overrides
+  /** Process incoming NMEA sentences during recording. */
   void SetNMEASentence(wxString& sentence);
+  /** Process incoming AIS sentences during recording. */
   void SetAISSentence(wxString& sentence);
   int GetToolbarToolCount(void);
+  /** Handle toolbar button clicks. */
   void OnToolbarToolCallback(int id);
+  /** Update the plugin's color scheme .*/
   void SetColorScheme(PI_ColorScheme cs);
 
+  /** Load a VDR file containing NMEA data, either in raw NMEA format or CSV. */
   bool LoadFile(const wxString& filename);
+  /** Start recording VDR data. */
   void StartRecording();
+  /** Stop recording VDR data. */
   void StopRecording();
+  /** Start playback of VDR data. */
   void StartPlayback();
+  /** Pause playback of VDR data. */
   void PausePlayback();
+  /** Stop playback of VDR data. */
   void StopPlayback();
+  /** Return whether recording is currently active. */
   bool IsRecording() { return m_recording; }
+  /** Return whether playback is currently active. */
   bool IsPlaying() { return m_playing; }
+  /** Return whether the end of the playback file has been reached. */
   bool IsAtFileEnd() const { return m_atFileEnd; }
-  /**
-   * Schedule the next playback message based on the message timestamp.
-   */
+  void ResetEndOfFile() { m_atFileEnd = false; }
+  /** Schedule the next playback message based on the message timestamp. */
   void ScheduleNextPlayback();
 
+  /** Show the plugin preferences dialog. */
   void ShowPreferencesDialog(wxWindow* parent);
   VDRDataFormat GetDataFormat() const { return m_data_format; }
   void SetDataFormat(VDRDataFormat dataFormat) { m_data_format = dataFormat; };
@@ -133,6 +148,16 @@ public:
   void ClearInputFile();
   void AdjustPlaybackBaseTime();
 
+  bool IsAutoStartRecording() const { return m_auto_start_recording; }
+  void SetAutoStartRecording(bool enable) { m_auto_start_recording = enable; }
+  bool IsUseSpeedThreshold() const { return m_use_speed_threshold; }
+  void SetUseSpeedThreshold(bool enable) { m_use_speed_threshold = enable; }
+  double GetSpeedThreshold() const { return m_speed_threshold; }
+  void SetSpeedThreshold(double threshold) { m_speed_threshold = threshold; }
+  int GetStopDelay() const { return m_stop_delay; }
+  void SetStopDelay(int minutes) { m_stop_delay = minutes; }
+  void CheckAutoRecording(double speed);
+
 private:
   bool LoadConfig(void);
   bool SaveConfig(void);
@@ -140,40 +165,67 @@ private:
   bool ParseCSVHeader(const wxString& header);
   wxString ParseCSVLine(const wxString& line, wxDateTime* timestamp);
   bool IsNMEAOrAIS(const wxString& line);
+  bool ParseNMEATimestamp(const wxString& nmea, wxDateTime* timestamp);
 
   int m_tb_item_id_record;
   int m_tb_item_id_play;
 
+  /** Configuration object for saving/loading settings. */
   wxFileConfig* m_pconfig;
   wxAuiManager* m_pauimgr;
   VDRControl* m_pvdrcontrol;
+  /** Input filename for playback. */
   wxString m_ifilename;
+  /** Output filename for recording. */
   wxString m_ofilename;
-  wxString m_recording_dir;  // Directory where recordings are saved
+  /** Directory where recordings are saved. */
+  wxString m_recording_dir;
   int m_interval;
+  /** Flag indicating whether recording is active. */
   bool m_recording;
+  /** Flag indicating whether playback is active. */
   bool m_playing;
+  /** Flag indicating whether end of file has been reached. */
   bool m_atFileEnd;
 
   VDRDataFormat m_data_format;
+  /** Input file stream for playback. */
   wxTextFile m_istream;
+  /** Output file stream for recording. */
   wxFile m_ostream;
   wxBitmap m_panelBitmap;
 
+  /** Flag indicating if current file is CSV format. */
   bool m_is_csv_file;
   wxArrayString m_header_fields;
   int m_timestamp_idx;
   int m_message_idx;
 
-  bool m_log_rotate;             // Whether to automatically rotate log files
-  int m_log_rotate_interval;     // Log rotation interval in hours
-  wxDateTime m_recording_start;  // When current recording started
+  /** Whether to automatically rotate log files. */
+  bool m_log_rotate;
+  /** Log rotation interval in hours. */
+  int m_log_rotate_interval;
+  /** When current recording started. */
+  wxDateTime m_recording_start;
+  /**  Real time when playback started. */
+  wxDateTime m_playback_base_time;
 
-  wxDateTime m_playback_base_time;  // Real time when playback started
-
+  /** The first (earliest) timestamp in the VDR file. */
   wxDateTime m_firstTimestamp;
+  /** The last timestamp in the VDR file. */
   wxDateTime m_lastTimestamp;
+  /** The current timestamp during VDR playback. */
   wxDateTime m_currentTimestamp;
+
+  bool m_auto_start_recording;  // Automatically start recording.
+  bool m_use_speed_threshold;   // Use speed threshold for auto recording.
+  double m_speed_threshold;     // Speed threshold for auto recording.
+  double m_last_speed;          // Last known boat speed.
+  /** Flag to control whether automatic recording is enabled. */
+  bool m_auto_recording_active;
+  int m_stop_delay;  // Minutes to wait before stopping.
+  /** When speed first dropped below threshold. */
+  wxDateTime m_below_threshold_since;
 
 #ifdef __ANDROID__
   wxString m_temp_outfile;

@@ -81,14 +81,24 @@ vdr_pi::vdr_pi(void* ppimgr) : opencpn_plugin_117(ppimgr), wxTimer(this) {
     wxLogWarning("VDR panel icon has NOT been loaded");
 
   m_pvdrcontrol = NULL;
-  m_recording = false;
-  m_data_format = VDRDataFormat::RawNMEA;
+
+  // Initialize configuration parameters
   m_interval = 1000;  // Default 1 second interval
   m_log_rotate = false;
   m_log_rotate_interval = 24;
+  m_auto_start_recording = false;
+  m_auto_recording_active = false;
+  m_speed_threshold = 0.5;  // Default 0.5 knots
+  m_stop_delay = 10;        // Default 10 minutes
+  m_data_format = VDRDataFormat::RawNMEA;
+
+  // Runtime variables
+  m_recording = false;
   m_is_csv_file = false;
   m_timestamp_idx = -1;
   m_message_idx = -1;
+  m_last_speed = 0.0;
+  m_auto_recording_active = false;
 }
 
 int vdr_pi::Init(void) {
@@ -100,6 +110,15 @@ int vdr_pi::Init(void) {
 
   // Load the configuration items
   LoadConfig();
+
+  // If auto-start is enabled and we're not playing back and not using speed
+  // threshold, start recording after initialization.
+  if (m_auto_start_recording && !m_use_speed_threshold && !IsPlaying()) {
+    wxLogMessage(_T("VDR: Auto-starting recording on plugin initialization"));
+    StartRecording();
+    SetToolbarToolStatus(m_tb_item_id_record, true);
+    m_auto_recording_active = true;
+  }
 
 #ifdef VDR_USE_SVG
   m_tb_item_id_record =
@@ -214,9 +233,33 @@ wxString vdr_pi::FormatNMEAAsCSV(const wxString& nmea) {
 }
 
 void vdr_pi::SetNMEASentence(wxString& sentence) {
+  // Check for RMC sentence to get speed
+  if (sentence.StartsWith("$GPRMC") || sentence.StartsWith("$GNRMC")) {
+    wxStringTokenizer tkz(sentence, wxT(","));
+    wxString token;
+
+    // Skip to speed field (field 7)
+    for (int i = 0; i < 7 && tkz.HasMoreTokens(); i++) {
+      token = tkz.GetNextToken();
+    }
+
+    if (tkz.HasMoreTokens()) {
+      token = tkz.GetNextToken();
+      if (!token.IsEmpty()) {
+        double speed;
+        if (token.ToDouble(&speed)) {
+          // Convert from knots to desired units if needed
+          m_last_speed = speed;
+          CheckAutoRecording(speed);
+        }
+      }
+    }
+  }
+
+  // Only record if recording is active (whether manual or automatic)
   if (!m_recording) return;
 
-  // Check if we need to rotate the VDR file.
+  // Check if we need to rotate the VDR file
   CheckLogRotation();
 
   switch (m_data_format) {
@@ -232,6 +275,66 @@ void vdr_pi::SetNMEASentence(wxString& sentence) {
 
 void vdr_pi::SetAISSentence(wxString& sentence) {
   SetNMEASentence(sentence);  // Handle the same way as NMEA
+}
+
+/**
+ * Check if auto-recording should be started or stopped based.
+ *
+ * Don't auto-record if:
+ * 1. Auto-recording is disabled
+ * 2. Manual recording is active (not auto-recording)
+ * 3. Playback is active
+ */
+void vdr_pi::CheckAutoRecording(double speed) {
+  if ((m_recording && !m_auto_recording_active) || IsPlaying()) {
+    return;
+  }
+
+  // If we're not using speed threshold, nothing to check.
+  if (!m_use_speed_threshold) {
+    return;
+  }
+
+  if (speed >= m_speed_threshold) {
+    // Reset the below-threshold timer when speed goes above threshold
+    m_below_threshold_since = wxDateTime();
+
+    if (!m_auto_recording_active) {
+      // Start recording
+      wxLogMessage(
+          _T("VDR: Auto-starting recording - speed %.2f exceeds threshold ")
+          _T("%.2f"),
+          speed, m_speed_threshold);
+      StartRecording();
+      m_auto_recording_active = true;
+      SetToolbarToolStatus(m_tb_item_id_record, true);
+    }
+  } else if (speed < m_speed_threshold && m_auto_recording_active) {
+    // Add hysteresis to prevent rapid starting/stopping
+    static const double HYSTERESIS = 0.2;  // 0.2 knots below threshold
+    if (speed < (m_speed_threshold - HYSTERESIS)) {
+      // Check if this is the first time we've gone below threshold
+      if (!m_below_threshold_since.IsValid()) {
+        m_below_threshold_since = wxDateTime::Now();
+        wxLogMessage(
+            _T("VDR: Speed dropped below threshold, starting stop delay ")
+            _T("timer"));
+      } else {
+        // Check if enough time has passed
+        wxTimeSpan timeBelow = wxDateTime::Now() - m_below_threshold_since;
+        if (timeBelow.GetMinutes() >= m_stop_delay) {
+          wxLogMessage(
+              _T("VDR: Auto-stopping recording - speed %.2f below threshold ")
+              _T("%.2f for %d minutes"),
+              speed, m_speed_threshold, m_stop_delay);
+          StopRecording();
+          m_auto_recording_active = false;
+          SetToolbarToolStatus(m_tb_item_id_record, false);
+          m_below_threshold_since = wxDateTime();  // Reset timer
+        }
+      }
+    }
+  }
 }
 
 bool vdr_pi::IsNMEAOrAIS(const wxString& line) {
@@ -535,6 +638,10 @@ bool vdr_pi::LoadConfig(void) {
   pConf->Read(_T("Interval"), &m_interval, 1000);
   pConf->Read(_T("LogRotate"), &m_log_rotate, false);
   pConf->Read(_T("LogRotateInterval"), &m_log_rotate_interval, 24);
+  pConf->Read(_T("AutoStartRecording"), &m_auto_start_recording, false);
+  pConf->Read(_T("UseSpeedThreshold"), &m_use_speed_threshold, false);
+  pConf->Read(_T("SpeedThreshold"), &m_speed_threshold, 0.5);
+  pConf->Read(_T("StopDelay"), &m_stop_delay, 10);  // Default 10 minutes
 
   int format;
   pConf->Read(_T("DataFormat"), &format,
@@ -556,6 +663,10 @@ bool vdr_pi::SaveConfig(void) {
   pConf->Write(_T("Interval"), m_interval);
   pConf->Write(_T("LogRotate"), m_log_rotate);
   pConf->Write(_T("LogRotateInterval"), m_log_rotate_interval);
+  pConf->Write(_T("AutoStartRecording"), m_auto_start_recording);
+  pConf->Write(_T("UseSpeedThreshold"), m_use_speed_threshold);
+  pConf->Write(_T("SpeedThreshold"), m_speed_threshold);
+  pConf->Write(_T("StopDelay"), m_stop_delay);
   pConf->Write(_T("DataFormat"), static_cast<int>(m_data_format));
 
   return true;
@@ -563,6 +674,12 @@ bool vdr_pi::SaveConfig(void) {
 
 void vdr_pi::StartRecording() {
   if (m_recording) return;
+
+  // Don't start recording if playback is active
+  if (IsPlaying()) {
+    wxLogMessage(_T("VDR: Cannot start recording while playback is active"));
+    return;
+  }
 
   // Generate filename based on current date/time
   wxString filename = GenerateFilename();
@@ -598,6 +715,7 @@ void vdr_pi::StartRecording() {
   }
 
   m_recording = true;
+  m_recording_start = wxDateTime::Now();
 }
 
 void vdr_pi::StopRecording() {
@@ -605,6 +723,7 @@ void vdr_pi::StopRecording() {
 
   m_ostream.Close();
   m_recording = false;
+  m_auto_recording_active = false;
 
 #ifdef __ANDROID__
   AndroidSecureCopyFile(m_temp_outfile, m_final_outfile);
@@ -650,18 +769,22 @@ void vdr_pi::StartPlayback() {
   // Reset end-of-file state when starting playback
   m_atFileEnd = false;
 
+  // Always adjust base time when starting playback, whether from pause or seek
   AdjustPlaybackBaseTime();
 
-  if (!m_istream.Open(m_ifilename)) {
-    wxMessageBox(_("Failed to open file."), _("VDR Plugin"),
-                 wxOK | wxICON_INFORMATION);
-    return;
+  if (!m_istream.IsOpened()) {
+    if (!m_istream.Open(m_ifilename)) {
+      wxMessageBox(_("Failed to open file."), _("VDR Plugin"),
+                   wxOK | wxICON_INFORMATION);
+      return;
+    }
   }
+
   Start(m_interval, wxTIMER_CONTINUOUS);
   m_playing = true;
 
   if (m_pvdrcontrol) {
-    m_pvdrcontrol->SetProgress(0);
+    m_pvdrcontrol->SetProgress(GetProgressFraction());
     m_pvdrcontrol->UpdateControls();
     m_pvdrcontrol->UpdateFileLabel(m_ifilename);
   }
@@ -691,10 +814,18 @@ void vdr_pi::StopPlayback() {
 
 void vdr_pi::ShowPreferencesDialog(wxWindow* parent) {
   VDRPrefsDialog dlg(parent, wxID_ANY, m_data_format, m_recording_dir,
-                     m_log_rotate, m_log_rotate_interval);
+                     m_log_rotate, m_log_rotate_interval,
+                     m_auto_start_recording, m_use_speed_threshold,
+                     m_speed_threshold, m_stop_delay);
   if (dlg.ShowModal() == wxID_OK) {
     SetDataFormat(dlg.GetDataFormat());
     SetRecordingDir(dlg.GetRecordingDir());
+    SetLogRotate(dlg.GetLogRotate());
+    SetLogRotateInterval(dlg.GetLogRotateInterval());
+    SetAutoStartRecording(dlg.GetAutoStartRecording());
+    SetUseSpeedThreshold(dlg.GetUseSpeedThreshold());
+    SetSpeedThreshold(dlg.GetSpeedThreshold());
+    SetStopDelay(dlg.GetStopDelay());
     SaveConfig();
 
     // Update UI if needed
@@ -719,108 +850,198 @@ void vdr_pi::CheckLogRotation() {
 }
 
 bool vdr_pi::ScanFileTimestamps() {
-  if (!m_istream.IsOpened() || !m_is_csv_file) {
+  if (!m_istream.IsOpened()) {
     return false;
   }
 
   // Initialize timestamps as invalid
-  m_firstTimestamp = wxDateTime();  // Creates an invalid datetime
-  m_lastTimestamp = wxDateTime();   // Creates an invalid datetime
-
-  wxString line;
+  m_firstTimestamp = wxDateTime();
+  m_lastTimestamp = wxDateTime();
+  m_currentTimestamp = wxDateTime();
   bool foundFirst = false;
 
-  // Read first non-header line for first timestamp
-  line = m_istream.GetFirstLine();
-  if (ParseCSVHeader(line)) {
+  // Read first line to check format
+  m_istream.GoToLine(0);
+  wxString line = m_istream.GetFirstLine();
+
+  // Try to parse as CSV
+  m_is_csv_file = ParseCSVHeader(line);
+
+  // If CSV, start with second line, otherwise start with first
+  if (m_is_csv_file) {
     line = m_istream.GetNextLine();
+  } else {
+    m_istream.GoToLine(0);  // Reset to handle first line for NMEA
   }
 
-  wxDateTime timestamp;
-  wxString nmea;
-  if (!line.IsEmpty()) {
-    nmea = ParseCSVLine(line, &timestamp);
-    if (!nmea.IsEmpty() && timestamp.IsValid()) {
-      m_firstTimestamp = timestamp;
-      foundFirst = true;
-      // Set initial timestamp to first timestamp if valid.
-      m_currentTimestamp = m_firstTimestamp;
-    }
-  }
-
-  // Scan to end of file for last timestamp
+  // Scan through file
   while (!m_istream.Eof()) {
-    line = m_istream.GetNextLine();
     if (!line.IsEmpty()) {
-      nmea = ParseCSVLine(line, &timestamp);
-      if (!nmea.IsEmpty() && timestamp.IsValid()) {
+      wxDateTime timestamp;
+      bool validTimestamp = false;
+
+      if (m_is_csv_file) {
+        wxString nmea = ParseCSVLine(line, &timestamp);
+        validTimestamp = !nmea.IsEmpty() && timestamp.IsValid();
+      } else {
+        validTimestamp = ParseNMEATimestamp(line, &timestamp);
+      }
+
+      if (validTimestamp) {
+        // Update last timestamp for each valid timestamp found
         m_lastTimestamp = timestamp;
+
+        // Store first timestamp found
+        if (!foundFirst) {
+          m_firstTimestamp = timestamp;
+          m_currentTimestamp = timestamp;  // Initialize current to first
+          foundFirst = true;
+        }
       }
     }
+    line = m_istream.GetNextLine();
   }
 
-  // Reset file position
+  // Reset file position to start for playback
   m_istream.GoToLine(0);
-  wxLogMessage("VDR file. First timestamp: %s. Last timestamp: %s",
-               FormatIsoDateTime(m_firstTimestamp),
-               FormatIsoDateTime(m_lastTimestamp));
-  return foundFirst && m_lastTimestamp.IsValid();
+
+  if (foundFirst) {
+    wxLogMessage("Found timestamps in %s file from %s to %s",
+                 m_is_csv_file ? "CSV" : "NMEA",
+                 FormatIsoDateTime(m_firstTimestamp),
+                 FormatIsoDateTime(m_lastTimestamp));
+    return true;
+  } else {
+    wxLogMessage("No timestamps found in %s file",
+                 m_is_csv_file ? "CSV" : "NMEA");
+    // Return false for CSV (error condition)
+    // Return true for NMEA (acceptable condition)
+    return !m_is_csv_file;
+  }
 }
 
 bool vdr_pi::SeekToFraction(double fraction) {
-  if (!m_istream.IsOpened() || !m_is_csv_file) {
+  if (!m_istream.IsOpened()) {
     return false;
   }
 
-  // Calculate target timestamp
-  wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;
-  wxTimeSpan targetSpan =
-      wxTimeSpan::Seconds((totalSpan.GetSeconds().ToDouble() * fraction));
-  wxDateTime targetTime = m_firstTimestamp + targetSpan;
+  // Handle seeking in CSV files
+  if (m_is_csv_file) {
+    if (!m_firstTimestamp.IsValid() || !m_lastTimestamp.IsValid()) {
+      return false;
+    }
 
-  // Scan file until we find first message after target time
-  m_istream.GoToLine(0);
-  wxString line = m_istream.GetFirstLine();
-  if (ParseCSVHeader(line)) {
+    // Calculate target timestamp
+    wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;
+    wxTimeSpan targetSpan =
+        wxTimeSpan::Seconds((totalSpan.GetSeconds().ToDouble() * fraction));
+    wxDateTime targetTime = m_firstTimestamp + targetSpan;
+
+    // Scan file until we find first message after target time
+    m_istream.GoToLine(0);
+    wxString line = m_istream.GetFirstLine();  // Skip header
     line = m_istream.GetNextLine();
+
+    while (!m_istream.Eof()) {
+      wxDateTime timestamp;
+      wxString nmea = ParseCSVLine(line, &timestamp);
+      if (!nmea.IsEmpty() && timestamp.IsValid() && timestamp >= targetTime) {
+        // Found our position, prepare to play from here
+        m_currentTimestamp = timestamp;
+        if (m_playing) {
+          AdjustPlaybackBaseTime();
+        }
+        return true;
+      }
+      line = m_istream.GetNextLine();
+    }
+    return false;
   }
 
-  while (!m_istream.Eof()) {
-    wxDateTime timestamp;
-    wxString nmea = ParseCSVLine(line, &timestamp);
-    if (!nmea.IsEmpty() && timestamp.IsValid() && timestamp >= targetTime) {
-      // Found our position, prepare to play from here
-      m_currentTimestamp = timestamp;
-      // If we're currently playing, adjust the base time
-      if (m_playing) {
-        AdjustPlaybackBaseTime();
+  // Handle seeking in NMEA files
+  else {
+    // If we have valid timestamps in the NMEA file, use them
+    if (m_firstTimestamp.IsValid() && m_lastTimestamp.IsValid()) {
+      wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;
+      wxTimeSpan targetSpan =
+          wxTimeSpan::Seconds((totalSpan.GetSeconds().ToDouble() * fraction));
+      wxDateTime targetTime = m_firstTimestamp + targetSpan;
+
+      // Scan file for closest timestamp
+      m_istream.GoToLine(0);
+      wxString line;
+      wxDateTime lastTimestamp;
+      bool foundPosition = false;
+
+      while (!m_istream.Eof()) {
+        line = m_istream.GetNextLine();
+        wxDateTime timestamp;
+        if (ParseNMEATimestamp(line, &timestamp)) {
+          if (timestamp >= targetTime) {
+            m_currentTimestamp = timestamp;
+            foundPosition = true;
+            break;
+          }
+          lastTimestamp = timestamp;
+        }
       }
-      if (m_pvdrcontrol) {
-        m_pvdrcontrol->SetProgress(GetProgressFraction());
+
+      if (foundPosition) {
+        if (m_playing) {
+          AdjustPlaybackBaseTime();
+        }
+        return true;
+      }
+    }
+
+    // For NMEA files without timestamps or if timestamp seek failed,
+    // fall back to line-based position
+    int totalLines = m_istream.GetLineCount();
+    if (totalLines > 0) {
+      int targetLine = static_cast<int>(fraction * totalLines);
+      m_istream.GoToLine(targetLine);
+
+      // Get the line content at current position
+      wxString line = m_istream.GetNextLine();
+      wxDateTime timestamp;
+      if (ParseNMEATimestamp(line, &timestamp)) {
+        m_currentTimestamp = timestamp;
+        if (m_playing) {
+          AdjustPlaybackBaseTime();
+        }
       }
       return true;
     }
-    line = m_istream.GetNextLine();
   }
 
   return false;
 }
 
 double vdr_pi::GetProgressFraction() const {
-  if (!m_firstTimestamp.IsValid() || !m_lastTimestamp.IsValid() ||
-      !m_currentTimestamp.IsValid()) {
-    return 0.0;
+  // For files with timestamps
+  if (m_firstTimestamp.IsValid() && m_lastTimestamp.IsValid() &&
+      m_currentTimestamp.IsValid()) {
+    wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;
+    wxTimeSpan currentSpan = m_currentTimestamp - m_firstTimestamp;
+
+    if (totalSpan.GetSeconds().ToLong() == 0) {
+      return 0.0;
+    }
+
+    return currentSpan.GetSeconds().ToDouble() /
+           totalSpan.GetSeconds().ToDouble();
   }
 
-  wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;
-  wxTimeSpan currentSpan = m_currentTimestamp - m_firstTimestamp;
-
-  if (totalSpan.GetSeconds().ToLong() == 0) {
-    return 0.0;
+  // For NMEA files without timestamps, use line position
+  if (!m_is_csv_file && m_istream.IsOpened()) {
+    int totalLines = m_istream.GetLineCount();
+    int currentLine = m_istream.GetCurrentLine();
+    if (totalLines > 0 && currentLine >= 0) {
+      return static_cast<double>(currentLine) / totalLines;
+    }
   }
 
-  return currentSpan.GetSeconds().ToDouble() /
-         totalSpan.GetSeconds().ToDouble();
+  return 0.0;
 }
 
 void vdr_pi::ClearInputFile() {
@@ -837,6 +1058,107 @@ wxString vdr_pi::GetInputFile() const {
     }
   }
   return wxEmptyString;
+}
+
+bool vdr_pi::ParseNMEATimestamp(const wxString& nmea, wxDateTime* timestamp) {
+  // Check for valid NMEA sentence
+  if (nmea.IsEmpty() || nmea[0] != '$') {
+    return false;
+  }
+
+  // Split the sentence into fields
+  wxStringTokenizer tok(nmea, wxT(",*"));
+  if (!tok.HasMoreTokens()) return false;
+
+  wxString sentenceId = tok.GetNextToken();
+
+  // Get current date for sentences with only time
+  wxDateTime currentDate = wxDateTime::Now();
+  int year = currentDate.GetYear();
+  int month = currentDate.GetMonth() + 1;  // wxDateTime months are 0-11
+  int day = currentDate.GetDay();
+
+  if (sentenceId.Contains(wxT("RMC"))) {  // GPRMC, GNRMC etc
+    // Format: $GPRMC,HHMMSS.ss,A,LLLL.LL,a,YYYYY.YY,a,x.x,x.x,DDMMYY,x.x,a*hh
+    if (!tok.HasMoreTokens()) return false;
+    wxString timeStr = tok.GetNextToken();
+
+    // Skip to date field (field 9)
+    for (int i = 0; i < 7 && tok.HasMoreTokens(); i++) {
+      tok.GetNextToken();
+    }
+
+    if (!tok.HasMoreTokens()) return false;
+    wxString dateStr = tok.GetNextToken();
+
+    // Parse date DDMMYY
+    if (dateStr.length() >= 6) {
+      day = wxAtoi(dateStr.Mid(0, 2));
+      month = wxAtoi(dateStr.Mid(2, 2));
+      year = 2000 + wxAtoi(dateStr.Mid(4, 2));  // Assuming 20xx
+    }
+
+    // Parse time HHMMSS.ss
+    if (timeStr.length() >= 6) {
+      int hour = wxAtoi(timeStr.Mid(0, 2));
+      int minute = wxAtoi(timeStr.Mid(2, 2));
+      int second = wxAtoi(timeStr.Mid(4, 2));
+      double subseconds = timeStr.length() > 7 ? wxAtof(timeStr.Mid(7)) : 0.0;
+
+      timestamp->Set(day, static_cast<wxDateTime::Month>(month - 1), year, hour,
+                     minute, second, static_cast<int>(subseconds * 1000));
+      return true;
+    }
+  } else if (sentenceId.Contains(wxT("ZDA"))) {  // GPZDA, GNZDA etc
+    // Format: $GPZDA,HHMMSS.ss,DD,MM,YYYY,xx,xx*hh
+    if (!tok.HasMoreTokens()) return false;
+    wxString timeStr = tok.GetNextToken();
+
+    // Get date fields
+    if (!tok.HasMoreTokens()) return false;
+    wxString dayStr = tok.GetNextToken();
+    if (!tok.HasMoreTokens()) return false;
+    wxString monthStr = tok.GetNextToken();
+    if (!tok.HasMoreTokens()) return false;
+    wxString yearStr = tok.GetNextToken();
+
+    if (!yearStr.IsEmpty() && !monthStr.IsEmpty() && !dayStr.IsEmpty()) {
+      year = wxAtoi(yearStr);
+      month = wxAtoi(monthStr);
+      day = wxAtoi(dayStr);
+    }
+
+    // Parse time HHMMSS.ss
+    if (timeStr.length() >= 6) {
+      int hour = wxAtoi(timeStr.Mid(0, 2));
+      int minute = wxAtoi(timeStr.Mid(2, 2));
+      int second = wxAtoi(timeStr.Mid(4, 2));
+      double subseconds = timeStr.length() > 7 ? wxAtof(timeStr.Mid(7)) : 0.0;
+
+      timestamp->Set(day, static_cast<wxDateTime::Month>(month - 1), year, hour,
+                     minute, second, static_cast<int>(subseconds * 1000));
+      return true;
+    }
+  } else if (sentenceId.Contains(wxT("GGA"))) {  // GPGGA, GNGGA etc
+    // Format:
+    // $GPGGA,HHMMSS.ss,LLLL.LL,a,YYYYY.YY,a,x,xx,x.x,x.x,M,x.x,M,x.x,xxxx*hh
+    if (!tok.HasMoreTokens()) return false;
+    wxString timeStr = tok.GetNextToken();
+
+    // Parse time HHMMSS.ss
+    if (timeStr.length() >= 6) {
+      int hour = wxAtoi(timeStr.Mid(0, 2));
+      int minute = wxAtoi(timeStr.Mid(2, 2));
+      int second = wxAtoi(timeStr.Mid(4, 2));
+      double subseconds = timeStr.length() > 7 ? wxAtof(timeStr.Mid(7)) : 0.0;
+
+      timestamp->Set(day, static_cast<wxDateTime::Month>(month - 1), year, hour,
+                     minute, second, static_cast<int>(subseconds * 1000));
+      return true;
+    }
+  }
+
+  return false;
 }
 
 //----------------------------------------------------------------
@@ -998,30 +1320,37 @@ bool vdr_pi::LoadFile(const wxString& filename) {
     StopPlayback();
   }
 
+  // Reset all file-related state
   m_ifilename = filename;
+  m_is_csv_file = false;
+  m_timestamp_idx = -1;
+  m_message_idx = -1;
+  m_header_fields.Clear();
+  m_atFileEnd = false;
+
+  // Close existing file if open
+  if (m_istream.IsOpened()) {
+    m_istream.Close();
+  }
+
   if (!m_istream.Open(m_ifilename)) {
     wxMessageBox(_("Failed to open file: ") + filename, _("VDR Plugin"),
                  wxOK | wxICON_ERROR);
     return false;
   }
 
-  // Reset file position
-  m_istream.GoToLine(0);
-  m_firstTimestamp = wxDateTime();    // Invalid datetime
-  m_lastTimestamp = wxDateTime();     // Invalid datetime
-  m_currentTimestamp = wxDateTime();  // Invalid datetime
-  m_atFileEnd = false;
-
-  // Scan timestamps if it's a CSV file.
-  wxString firstLine = m_istream.GetFirstLine();
-  if (ParseCSVHeader(firstLine)) {
-    if (!ScanFileTimestamps()) {
-      wxMessageBox(_("No valid timestamps found in file."), _("VDR Plugin"),
+  // Try to scan for timestamps
+  if (!ScanFileTimestamps()) {
+    // For CSV files, timestamps are required
+    if (m_is_csv_file) {
+      wxMessageBox(_("No valid timestamps found in CSV file."), _("VDR Plugin"),
                    wxOK | wxICON_ERROR);
       m_istream.Close();
       return false;
     }
-    m_istream.GoToLine(0);
+    // For NMEA files, timestamps are optional
+    wxLogMessage(
+        "No timestamps found in NMEA file - continuing with basic playback");
   }
 
   return true;
@@ -1052,6 +1381,9 @@ void VDRControl::OnProgressSliderUpdated(wxScrollEvent& event) {
 void VDRControl::OnProgressSliderEndDrag(wxScrollEvent& event) {
   double fraction = m_progressSlider->GetValue() / 1000.0;
   m_pvdr->SeekToFraction(fraction);
+  // Reset the end-of-file state when user drags the slider, the button should
+  // change to "play" state.
+  m_pvdr->ResetEndOfFile();
   if (m_wasPlayingBeforeDrag) {
     m_pvdr->StartPlayback();
   }
