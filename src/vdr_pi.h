@@ -148,6 +148,16 @@ public:
   void ClearInputFile();
   void AdjustPlaybackBaseTime();
 
+  bool IsAutoStartRecording() const { return m_auto_start_recording; }
+  void SetAutoStartRecording(bool enable) { m_auto_start_recording = enable; }
+  bool IsUseSpeedThreshold() const { return m_use_speed_threshold; }
+  void SetUseSpeedThreshold(bool enable) { m_use_speed_threshold = enable; }
+  double GetSpeedThreshold() const { return m_speed_threshold; }
+  void SetSpeedThreshold(double threshold) { m_speed_threshold = threshold; }
+  int GetStopDelay() const { return m_stop_delay; }
+  void SetStopDelay(int minutes) { m_stop_delay = minutes; }
+  void CheckAutoRecording(double speed);
+
 private:
   bool LoadConfig(void);
   bool SaveConfig(void);
@@ -206,6 +216,16 @@ private:
   wxDateTime m_lastTimestamp;
   /** The current timestamp during VDR playback. */
   wxDateTime m_currentTimestamp;
+
+  bool m_auto_start_recording;  // Automatically start recording.
+  bool m_use_speed_threshold;   // Use speed threshold for auto recording.
+  double m_speed_threshold;     // Speed threshold for auto recording.
+  double m_last_speed;          // Last known boat speed.
+  /** Flag to control whether automatic recording is enabled. */
+  bool m_auto_recording_active;
+  int m_stop_delay;  // Minutes to wait before stopping.
+  /** When speed first dropped below threshold. */
+  wxDateTime m_below_threshold_since;
 
 #ifdef __ANDROID__
   wxString m_temp_outfile;

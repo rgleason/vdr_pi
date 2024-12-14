@@ -39,16 +39,24 @@ class VDRPrefsDialog : public wxDialog {
 public:
   VDRPrefsDialog(wxWindow* parent, wxWindowID id, VDRDataFormat format,
                  const wxString& recordingDir, bool logRotate,
-                 int logRotateInterval);
+                 int logRotateInterval, bool autoStartRecording,
+                 bool useSpeedThreshold, double speedThreshold, int stopDelay);
   VDRDataFormat GetDataFormat() const { return m_format; }
   wxString GetRecordingDir() const { return m_recording_dir; }
   bool GetLogRotate() const { return m_log_rotate; }
   int GetLogRotateInterval() const { return m_log_rotate_interval; }
+  bool GetAutoStartRecording() const { return m_auto_start_recording; }
+  bool GetUseSpeedThreshold() const { return m_use_speed_threshold; }
+  double GetSpeedThreshold() const { return m_speed_threshold; }
+  int GetStopDelay() const { return m_stop_delay; }
 
 private:
   void OnOK(wxCommandEvent& event);
   void OnDirSelect(wxCommandEvent& event);
   void OnLogRotateCheck(wxCommandEvent& event);
+  void OnAutoRecordCheck(wxCommandEvent& event);
+  void OnUseSpeedThresholdCheck(wxCommandEvent& event);
+  void UpdateControlStates();
   void CreateControls();
 
   wxRadioButton* m_nmeaRadio;
@@ -58,10 +66,20 @@ private:
   wxCheckBox* m_logRotateCheck;
   wxSpinCtrl* m_logRotateIntervalCtrl;
 
+  // Auto record settings
+  wxCheckBox* m_autoStartRecordingCheck;
+  wxCheckBox* m_useSpeedThresholdCheck;
+  wxSpinCtrlDouble* m_speedThresholdCtrl;
+  wxSpinCtrl* m_stopDelayCtrl;
+
   VDRDataFormat m_format;
   wxString m_recording_dir;
   bool m_log_rotate;
   int m_log_rotate_interval;
+  bool m_auto_start_recording;  // Automatically start recording.
+  bool m_use_speed_threshold;   // Use speed threshold for auto recording.
+  double m_speed_threshold;     // Speed threshold for auto recording.
+  int m_stop_delay;             // Minutes to wait before stopping.
 
   DECLARE_EVENT_TABLE()
 };
