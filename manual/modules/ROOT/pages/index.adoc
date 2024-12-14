@@ -42,7 +42,24 @@ plugin.
 
 image::vdr-icons.png[]
 
-== 3. Operation
+== 3. Preferences
+
+Configuration parameters to:
+1. Automatically start recording when plugin starts. Auto-recording is disabled by default.
+2. Optionally start/stop recording when speed exceeds threshold or goes below threshold.
+3. Optionally stop recording only after speed is below threshold for X minutes.
+The plugin uses the `RMC` sentence to get the speed.
+
+image::VDR-Preferences.png[]
+
+Example log:
+```
+13:46:49.236 MESSAGE vdr_pi.cpp:304 VDR: Auto-starting recording - speed 10.00 exceeds threshold 0.50
+13:49:11.712 MESSAGE vdr_pi.cpp:319 VDR: Speed dropped below threshold, starting stop delay timer
+13:51:11.396 MESSAGE vdr_pi.cpp:326 VDR: Auto-stopping recording - speed 0.10 below threshold 0.50 for 2 minutes
+```
+
+== 4. Operation
 
 * The left button is for recording, and leads to a “Choose file” dialog
 to select the file to record to. A file with a .txtfile extension works
@@ -82,7 +99,7 @@ image::nmea-debug-dsc.png[]
 
 * The VDR shows up as “PlugIn Virtual” in the NMEA Debug Window.
 
-== 4. FAQ
+== 5. FAQ
 
 === Why is my SOG way off and showing 60-70 knots in the Dashboard, when I playback a file?
 
