@@ -116,8 +116,12 @@ public:
   bool LoadFile(const wxString& filename);
   /** Start recording VDR data. */
   void StartRecording();
-  /** Stop recording VDR data. */
-  void StopRecording();
+  /** Stop recording VDR data and close the VDR file. */
+  void StopRecording(const wxString& reason = wxEmptyString);
+  /** Pause recording VDR data, retain the existing VDR file. */
+  void PauseRecording(const wxString& reason = wxEmptyString);
+  /** Resume recording using the same VDR file. */
+  void ResumeRecording();
   /** Start playback of VDR data. */
   void StartPlayback();
   /** Pause playback of VDR data. */
@@ -179,6 +183,7 @@ public:
    * Check if auto-recording should be started or stopped based on boat speed.
    */
   void CheckAutoRecording(double speed);
+  bool HasValidTimestamps() const;
 
 private:
   class TimerHandler : public wxTimer {
@@ -193,7 +198,8 @@ private:
   bool SaveConfig(void);
   wxString FormatNMEA0183AsCSV(const wxString& nmea);
   bool ParseCSVHeader(const wxString& header);
-  wxString ParseCSVLine(const wxString& line, wxDateTime* timestamp);
+  /** Parse timestamp from a CSV line or raw NMEA sentence. */
+  wxString ParseCSVLineTimestamp(const wxString& line, wxDateTime* timestamp);
   /** Return true if the message is a NMEA0183 or AIS message */
   bool IsNMEA0183OrAIS(const wxString& message);
   /** Parse timestamp from NMEA0183 sentence. */
@@ -206,6 +212,18 @@ private:
   void OnN2KEvent(wxCommandEvent& ev);
   /** Process incoming SignalK message from OpenCPN. */
   void OnSignalKEvent(wxCommandEvent& ev);
+
+  /**
+   * Get the next non-empty line from the input stream. Empty lines are skipped.
+   * A line is considered empty if it contains only whitespace.
+   *
+   * @param fromStart If true, starts reading from the beginning of the file.
+   *                 If false, continues from current position.
+   * @return The next non-empty line with leading/trailing whitespace removed,
+   *         or empty string if no more non-empty lines exist or file isn't
+   * open.
+   */
+  wxString GetNextNonEmptyLine(bool fromStart = false);
 
   int m_tb_item_id_record;
   int m_tb_item_id_play;
@@ -223,6 +241,17 @@ private:
   int m_interval;
   /** Flag indicating whether recording is active. */
   bool m_recording;
+  /**
+   * Flag to track if recording is temporarily paused.
+   *
+   * This flag is used to pause recording when the boat speed drops below the
+   * threshold and then rises above it again.
+   */
+  bool m_recording_paused;
+  /** Start time of the current recording session. */
+  wxDateTime m_current_recording_start;
+  /** When recording was last paused. */
+  wxDateTime m_recording_pause_time;
   /** Flag indicating whether playback is active. */
   bool m_playing;
   /** Flag indicating whether end of file has been reached. */
@@ -261,6 +290,8 @@ private:
   wxDateTime m_lastTimestamp;
   /** The current timestamp during VDR playback. */
   wxDateTime m_currentTimestamp;
+  /** Track whether file has valid timestamps. */
+  bool m_has_timestamps;
 
   /**
    * Configuration parameter to control whether auto-start recording is enabled

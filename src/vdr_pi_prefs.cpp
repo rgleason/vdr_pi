@@ -197,9 +197,9 @@ void VDRPrefsDialog::CreateControls() {
                   wxALIGN_CENTER_VERTICAL);
   autoSizer->Add(speedSizer, 0, wxLEFT | wxRIGHT | wxBOTTOM, 5);
 
-  // Stop delay control
+  // Pause delay control
   wxBoxSizer* delaySizer = new wxBoxSizer(wxHORIZONTAL);
-  delaySizer->Add(new wxStaticText(this, wxID_ANY, _("Stop recording after")),
+  delaySizer->Add(new wxStaticText(this, wxID_ANY, _("Pause recording after")),
                   0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
   m_stopDelayCtrl =
       new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition,
