@@ -390,7 +390,9 @@ void vdr_pi::SetNMEASentence(wxString& sentence) {
     return;
   }
   // Check for RMC sentence to get speed and check for auto-recording.
-  if (sentence.StartsWith("$GPRMC") || sentence.StartsWith("$GNRMC")) {
+  // There can be different talkers on the stream so look at the message type
+  // irespective of the talker
+  if (sentence.size() >= 6 && sentence.substr(3, 3) == "RMC") {
     wxStringTokenizer tkz(sentence, wxT(","));
     wxString token;
 
