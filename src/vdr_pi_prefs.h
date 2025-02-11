@@ -143,9 +143,7 @@ private:
   // Protocol selection
   wxCheckBox* m_nmea0183Check;  //!< Enable NMEA 0183 recording
   wxCheckBox* m_nmea2000Check;  //!< Enable NMEA 2000 recording
-#if 0
-   wxCheckBox* m_signalKCheck;      //!< Enable Signal K recording
-#endif
+  wxCheckBox* m_signalKCheck;   //!< Enable Signal K recording
 
   // Replay tab controls
   // NMEA 0183 replay mode
@@ -155,9 +153,7 @@ private:
   // Network selection
   ConnectionSettingsPanel* m_nmea0183NetPanel;
   ConnectionSettingsPanel* m_nmea2000NetPanel;
-#if 0
   ConnectionSettingsPanel* m_signalKNetPanel;
-#endif
 
   VDRDataFormat m_format;       //!< Selected data format
   wxString m_recording_dir;     //!< Selected recording directory

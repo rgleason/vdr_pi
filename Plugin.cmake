@@ -65,7 +65,7 @@ set(SRC
 )
 
 
-set(PKG_API_LIB api-18)  #  A directory in libs/ e. g., api-18 or api-19
+set(PKG_API_LIB api-19)  #  A directory in libs/ e. g., api-18 or api-19
 
 macro(late_init)
   # Perform initialization after the PACKAGE_NAME library, compilers
@@ -80,8 +80,8 @@ macro(add_plugin_libraries)
 #  add_subdirectory("${CMAKE_SOURCE_DIR}/opencpn-libs/tinyxml")
 #  target_link_libraries(${PACKAGE_NAME} ocpn::tinyxml)
 
-#  add_subdirectory("${CMAKE_SOURCE_DIR}/opencpn-libs/wxJSON")
-#  target_link_libraries(${PACKAGE_NAME} ocpn::wxjson)
+add_subdirectory("${CMAKE_SOURCE_DIR}/opencpn-libs/wxJSON")
+target_link_libraries(${PACKAGE_NAME} ocpn::wxjson)
 
 #  add_subdirectory("${CMAKE_SOURCE_DIR}/opencpn-libs/plugingl")
 #  target_link_libraries(${PACKAGE_NAME} ocpn::plugingl)
