@@ -50,6 +50,7 @@
 #include "config.h"
 #include <wx/event.h>
 #include "qtstylesheet.h"
+#include <wx/window.h>
 
 
 
