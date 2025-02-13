@@ -48,6 +48,10 @@
 #include "vdr_pi_time.h"
 #include "vdr_network.h"
 #include "config.h"
+#include <wx/event.h>
+#include "qtstylesheet.h"
+
+
 
 enum { ID_DASH_PREFS = 999, ID_DASH_RESIZE };
 
