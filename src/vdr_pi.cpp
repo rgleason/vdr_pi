@@ -93,7 +93,164 @@ vdr_pi::vdr_pi(void* ppimgr) : opencpn_plugin_118(ppimgr) {
   m_last_speed = 0.0;
   m_sentence_buffer.clear();
   m_messages_dropped = false;
+
+#ifdef __ANDROID__
+
+  m_binResize = false;
+
+  g_Window = this;
+  GetHandle()->setStyleSheet(qtStyleSheet);
+  Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(vdr_pi:: ::OnMouseEvent));
+  Connect(wxEVT_LEFT_UP, wxMouseEventHandler(vdr_pi::OnMouseEvent));
+
+  Connect(wxEVT_MOTION, wxMouseEventHandler(vdr_pi::OnMouseEvent));
+
+#endif
 }
+
+#ifdef __ANDROID__
+wxPoint g_startPos;
+wxPoint g_startMouse;
+wxPoint g_mouse_pos_screen;
+
+void vdr_pi::OnPopupClick(wxCommandEvent& evt) {
+  switch (evt.GetId()) {
+    case ID_DASH_RESIZE:
+      m_binResize = true;
+      break;
+      // case ID_SOMETHING_ELSE:
+      //   break;
+  }
+}
+
+void vdr_pi::OnDLeftClick(wxMouseEvent& event) {
+  wxMenu mnu;
+  mnu.Append(ID_DASH_RESIZE, "Resize...");
+  // mnu.Append(ID_SOMETHING_ELSE, "Do something else");
+  mnu.Connect(wxEVT_COMMAND_MENU_SELECTED,
+              wxCommandEventHandler(vdr_pi::OnPopupClick), NULL, this);
+  PopupMenu(&mnu);
+}
+
+void vdr_pi::OnMouseEvent(wxMouseEvent& event) {
+  if (m_binResize) {
+    wxSize currentSize = g_Window->GetSize();
+    double aRatio = (double)currentSize.y / (double)currentSize.x;
+
+    wxSize par_size = GetOCPNCanvasWindow()->GetClientSize();
+    wxPoint par_pos = GetOCPNCanvasWindow()->GetPosition();
+
+    if (event.LeftDown()) {
+      m_resizeStartPoint = event.GetPosition();
+      m_resizeStartSize = currentSize;
+      m_binResize2 = true;
+    }
+
+    if (m_binResize2) {
+      if (event.Dragging()) {
+        wxPoint p = event.GetPosition();
+
+        wxSize dragSize = m_resizeStartSize;
+
+        dragSize.y += p.y - m_resizeStartPoint.y;
+        dragSize.x += p.x - m_resizeStartPoint.x;
+        ;
+
+        if ((par_pos.y + dragSize.y) > par_size.y)
+          dragSize.y = par_size.y - par_pos.y;
+
+        if ((par_pos.x + dragSize.x) > par_size.x)
+          dragSize.x = par_size.x - par_pos.x;
+
+        /// vertical
+        // dragSize.x = dragSize.y / aRatio;
+
+        // not too small
+        dragSize.x = wxMax(dragSize.x, 150);
+        dragSize.y = wxMax(dragSize.y, 150);
+
+        g_Window->SetSize(dragSize);
+      }
+
+      if (event.LeftUp()) {
+        wxPoint p = event.GetPosition();
+
+        wxSize dragSize = m_resizeStartSize;
+
+        dragSize.y += p.y - m_resizeStartPoint.y;
+        dragSize.x += p.x - m_resizeStartPoint.x;
+        ;
+
+        if ((par_pos.y + dragSize.y) > par_size.y)
+          dragSize.y = par_size.y - par_pos.y;
+
+        if ((par_pos.x + dragSize.x) > par_size.x)
+          dragSize.x = par_size.x - par_pos.x;
+
+        // not too small
+        dragSize.x = wxMax(dragSize.x, 150);
+        dragSize.y = wxMax(dragSize.y, 150);
+
+        g_Window->SetSize(dragSize);
+
+        m_binResize = false;
+        m_binResize2 = false;
+      }
+    }
+  } else {
+    if (event.Dragging()) {
+      m_resizeStartPoint = event.GetPosition();
+      int x = wxMax(0, m_resizeStartPoint.x);
+      int y = wxMax(0, m_resizeStartPoint.y);
+      int xmax = ::wxGetDisplaySize().x - GetSize().x;
+      x = wxMin(x, xmax);
+      int ymax =
+          ::wxGetDisplaySize().y - (GetSize().y);  // Some fluff at the bottom
+      y = wxMin(y, ymax);
+
+      g_Window->Move(x, y);
+    }
+  }
+}
+
+void vdr_pi::OnContextMenuSelect(wxCommandEvent& event) {
+  //
+  switch (event.GetId()) {
+    case ID_DASH_RESIZE: {
+      /*
+                  for( unsigned int i=0; i<m_ArrayOfInstrument.size(); i++ ) {
+                      DashboardInstrument* inst =
+         m_ArrayOfInstrument.Item(i)->m_pInstrument; inst->Hide();
+                  }
+      */
+      m_binResize = true;
+      wxMessageBox("here");
+
+      return;
+    }
+  }
+  pPlugIn->SaveConfig();
+}
+
+void vdr_pi::OnContextMenu(wxContextMenuEvent& event) {
+  wxMenu* contextMenu = new wxMenu();
+  wxFont* pf = OCPNGetFont(_T("Menu"), 0);
+
+  // add stuff
+  wxMenuItem* item1 =
+      new wxMenuItem(contextMenu, ID_DASH_PREFS, _("Preferences..."));
+  item1->SetFont(*pf);
+  contextMenu->Append(item1);
+
+  wxMenuItem* item2 =
+      new wxMenuItem(contextMenu, ID_DASH_RESIZE, _("Resize..."));
+  item2->SetFont(*pf);
+  contextMenu->Append(item2);
+
+  PopupMenu(contextMenu);
+  delete contextMenu;
+}
+#endif  // End of Android functions for move/resize
 
 int vdr_pi::Init(void) {
   m_eventHandler = new wxEvtHandler();
@@ -140,7 +297,8 @@ int vdr_pi::Init(void) {
 #endif
 
   return (WANTS_TOOLBAR_CALLBACK | INSTALLS_TOOLBAR_TOOL | WANTS_CONFIG |
-          WANTS_NMEA_SENTENCES | WANTS_AIS_SENTENCES | WANTS_PREFERENCES);
+          WANTS_NMEA_SENTENCES | WANTS_AIS_SENTENCES | WANTS_PREFERENCES |
+          WANTS_MOUSE_EVENTS);
 }
 
 bool vdr_pi::DeInit(void) {
