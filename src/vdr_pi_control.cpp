@@ -175,8 +175,7 @@ void VDRControl::OnContextMenuSelect(wxCommandEvent& event) {
 
       return;
     }
-  }
-  pPlugIn->SaveConfig();
+  }  
 }
 
 void VDRControl::OnContextMenu(wxContextMenuEvent& event) {
