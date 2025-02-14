@@ -90,6 +90,21 @@ public:
    */
   void UpdatePlaybackStatus(const wxString& status);
 
+  #ifdef __ANDROID__
+  void OnContextMenu(wxContextMenuEvent& event);
+  void OnContextMenuSelect(wxCommandEvent& event);
+
+  void OnMouseEvent(wxMouseEvent& event);
+  wxPoint m_resizeStartPoint;
+  wxSize m_resizeStartSize;
+  bool m_binResize;
+  bool m_binResize2;
+
+  void OnPopupClick(wxCommandEvent& evt);
+  void OnDLeftClick(wxMouseEvent& event);
+
+#endif
+
 private:
   /** Create and layout UI controls. */
   void CreateControls();
