@@ -57,10 +57,6 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) { delete p; }
 wxDEFINE_EVENT(EVT_N2K, ObservedEvt);
 wxDEFINE_EVENT(EVT_SIGNALK, ObservedEvt);
 
-#ifdef __ANDROID__
-wxWindow* g_Window;
-#endif
-
 vdr_pi::vdr_pi(void* ppimgr) : opencpn_plugin_118(ppimgr) {
   // Create the PlugIn icons
   initialize_images();
