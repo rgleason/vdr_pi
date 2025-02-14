@@ -109,6 +109,8 @@ public:
 
 #endif
 
+  int window_id;
+
 private:
   /** Create and layout UI controls. */
   void CreateControls();

@@ -56,12 +56,9 @@ END_EVENT_TABLE()
 bool m_binResize = false;
 wxWindow* g_Window = m_window;
 
-g_Window->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(VDRControl::OnMouseEvent));
-g_Window->Connect(wxEVT_LEFT_UP,
-                        wxMouseEventHandler(VDRControl::OnMouseEvent));
-
-g_Window->Connect(wxEVT_MOTION,
-                        wxMouseEventHandler(VDRControl::OnMouseEvent));
+Bind(wxEVT_LEFT_DOWN,&VDRControl::OnMouseEvent));
+Bind(wxEVT_LEFT_UP(VDRControl::OnMouseEvent));
+Bind(wxEVT_MOTION(VDRControl::OnMouseEvent));
 
 #endif
 
@@ -184,7 +181,7 @@ void VDRControl::OnContextMenuSelect(wxCommandEvent& event) {
 
       return;
     }
-  }  
+  }
 }
 
 void VDRControl::OnContextMenu(wxContextMenuEvent& event) {
@@ -242,8 +239,8 @@ VDRControl::VDRControl(wxWindow* parent, wxWindowID id, vdr_pi* vdr)
       m_pvdr(vdr),
       m_isDragging(false),
       m_wasPlayingBeforeDrag(false) {
-
   m_window = this;
+  window_id = id;
 
   wxColour cl;
   GetGlobalColor(_T("DILG1"), &cl);
