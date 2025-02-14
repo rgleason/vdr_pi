@@ -12,15 +12,15 @@
 # -------- Options ----------
 
 set(OCPN_TEST_REPO
-    "mike-rossiter/vdr-alpha"
+    "opencpn/vdr-alpha"
     CACHE STRING "Default repository for untagged builds"
 )
 set(OCPN_BETA_REPO
-    "mike-rossiter/vdr-beta"
+    "opencpn/vdr-beta"
     CACHE STRING "Default repository for tagged builds matching 'beta'"
 )
 set(OCPN_RELEASE_REPO
-    "mike-rossiter/vdr-prod"
+    "opencpn/vdr-prod"
     CACHE STRING "Default repository for tagged builds not matching 'beta'"
 )
 option(VDR_USE_SVG "Use SVG graphics" ON)
