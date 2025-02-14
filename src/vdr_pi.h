@@ -56,10 +56,6 @@
 
 enum { ID_DASH_PREFS = 999, ID_DASH_RESIZE };
 
-#ifdef __ANDROID__
-wxWindow* g_Window;
-#endif
-
 #define VDR_TOOL_POSITION -1  // Request default positioning of toolbar tool
 
 //----------------------------------------------------------------------------------------------------------
