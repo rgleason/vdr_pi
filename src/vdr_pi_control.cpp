@@ -50,8 +50,8 @@ END_EVENT_TABLE()
 
 #ifdef __ANDROID__
 
-m_binResize = false;
-g_Window = this;
+bool m_binResize = false;
+wxWindow* g_Window = VDRControl;
 
 #endif
 
