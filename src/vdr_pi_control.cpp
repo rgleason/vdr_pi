@@ -51,20 +51,7 @@ EVT_MOTION(VDRControl::OnMouseEvent)
 
 END_EVENT_TABLE()
 
-#ifdef __ANDROID__
 
-bool m_binResize = false;
-wxWindow* g_Window = m_window;
-
-Connect(wxEVT_LEFT_DOWN,
-                    wxMouseEventHandler(VDRControl::OnMouseEvent));
-Connect(wxEVT_LEFT_UP,
-                    wxMouseEventHandler(VDRControl::OnMouseEvent));
-
-Connect(wxEVT_MOTION,
-                    wxMouseEventHandler(VDRControl::OnMouseEvent));
-
-#endif
 
 #ifdef __ANDROID__
 wxPoint g_startPos;
@@ -261,6 +248,19 @@ VDRControl::VDRControl(wxWindow* parent, wxWindowID id, vdr_pi* vdr)
     UpdateFileStatus(_("No file loaded"));
   }
   UpdatePlaybackStatus(_("Stopped"));
+
+  #ifdef __ANDROID__
+
+  bool m_binResize = false;
+  wxWindow* g_Window = m_window;
+
+  Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(VDRControl::OnMouseEvent));
+  Connect(wxEVT_LEFT_UP, wxMouseEventHandler(VDRControl::OnMouseEvent));
+
+  Connect(wxEVT_MOTION, wxMouseEventHandler(VDRControl::OnMouseEvent));
+
+#endif
+
 }
 
 void VDRControl::CreateControls() {
