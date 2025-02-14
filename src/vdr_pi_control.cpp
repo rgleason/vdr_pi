@@ -41,9 +41,9 @@ EVT_COMMAND_SCROLL_THUMBTRACK(ID_VDR_PROGRESS,
 EVT_COMMAND_SCROLL_THUMBRELEASE(ID_VDR_PROGRESS,
                                 VDRControl::OnProgressSliderEndDrag)
 #ifdef __ANDROID__
-EVT_LEFT_DOWN(wxMouseEventHandler(VDRControl::OnMouseEvent))
-EVT_LEFT_UP(wxMouseEventHandler(VDRControl::OnMouseEvent))
-EVT_MOTION(wxMouseEventHandler(VDRControl::OnMouseEvent))
+EVT_LEFT_DOWN(VDRControl::OnMouseEvent)
+EVT_LEFT_UP(VDRControl::OnMouseEvent)
+EVT_MOTION(VDRControl::OnMouseEvent)
 #endif
 
 END_EVENT_TABLE()
