@@ -28,7 +28,7 @@
 #include "ocpn_plugin.h"
 
 #ifdef __ANDROID__
-wxWindow* g_Window;
+//wxWindow* g_Window;
 #endif
 
 class vdr_pi;
