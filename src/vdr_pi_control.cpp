@@ -56,9 +56,9 @@ END_EVENT_TABLE()
 bool m_binResize = false;
 wxWindow* g_Window = m_window;
 
-Bind(wxEVT_LEFT_DOWN, &VDRControl::OnMouseEvent, g_Window);
-Bind(wxEVT_LEFT_UP, &VDRControl::OnMouseEvent, g_Window);
-Bind(wxEVT_MOTION, &VDRControl::OnMouseEvent, g_Window);
+VDRControl::Bind(wxEVT_LEFT_DOWN, &VDRControl::OnMouseEvent, g_Window);
+VDRControl::Bind(wxEVT_LEFT_UP, &VDRControl::OnMouseEvent, g_Window);
+VDRControl::Bind(wxEVT_MOTION, &VDRControl::OnMouseEvent, g_Window);
 
 #endif
 
