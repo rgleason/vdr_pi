@@ -51,7 +51,7 @@ END_EVENT_TABLE()
 #ifdef __ANDROID__
 
 bool m_binResize = false;
-wxWindow* g_Window = m_pvdrcontrol;
+wxWindow* g_Window = m_pvdr;
 
 #endif
 
@@ -82,7 +82,6 @@ void VDRControl::OnDLeftClick(wxMouseEvent& event) {
 void VDRControl::OnMouseEvent(wxMouseEvent& event) {
   if (m_binResize) {
     wxSize currentSize = g_Window->GetSize();
-    double aRatio = (double)currentSize.y / (double)currentSize.x;
 
     wxSize par_size = GetOCPNCanvasWindow()->GetClientSize();
     wxPoint par_pos = GetOCPNCanvasWindow()->GetPosition();
