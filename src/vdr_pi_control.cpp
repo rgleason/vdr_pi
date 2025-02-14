@@ -51,7 +51,7 @@ END_EVENT_TABLE()
 #ifdef __ANDROID__
 
 bool m_binResize = false;
-wxWindow* g_Window = m_pvdr;
+wxWindow* g_Window = m_window;
 
 #endif
 

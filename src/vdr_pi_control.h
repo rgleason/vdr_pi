@@ -184,6 +184,8 @@ private:
   wxStaticText* m_timeLabel;   //!< Label showing current timestamp
   vdr_pi* m_pvdr;              //!< Owner plugin instance
 
+  wxWindow* m_window = this;
+
   bool m_isDragging;            //!< Flag indicating progress slider drag
   bool m_wasPlayingBeforeDrag;  //!< Playback state before drag started
 
