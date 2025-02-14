@@ -230,9 +230,7 @@ VDRControl::VDRControl(wxWindow* parent, wxWindowID id, vdr_pi* vdr)
       m_pvdr(vdr),
       m_isDragging(false),
       m_wasPlayingBeforeDrag(false) {
-  m_window = this;
-  window_id = id;
-
+  
   wxColour cl;
   GetGlobalColor(_T("DILG1"), &cl);
   SetBackgroundColour(cl);

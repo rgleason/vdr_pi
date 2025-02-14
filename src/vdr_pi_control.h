@@ -109,9 +109,8 @@ public:
 
 #endif
 
-  int window_id;
 #ifdef __ANDROID__
-  wxWindow* g_Window = m_window;
+  wxWindow* g_Window;
 #endif
 
 private:
