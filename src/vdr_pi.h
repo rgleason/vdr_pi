@@ -52,8 +52,6 @@
 #include "qtstylesheet.h"
 #include <wx/window.h>
 
-
-
 enum { ID_DASH_PREFS = 999, ID_DASH_RESIZE };
 
 #define VDR_TOOL_POSITION -1  // Request default positioning of toolbar tool
@@ -136,6 +134,7 @@ wxDECLARE_EVENT(EVT_SIGNALK, ObservedEvt);
  */
 class vdr_pi : public opencpn_plugin_118 {
 public:
+  
   /** Creates a new VDR plugin instance. */
   vdr_pi(void* ppimgr);
 
@@ -156,8 +155,6 @@ public:
   wxString GetCommonName() override;
   wxString GetShortDescription();
   wxString GetLongDescription();
-
-  
 
   /**
    * Process timer notification for playback events.

@@ -20,6 +20,8 @@
 #include "vdr_pi_control.h"
 #include "vdr_pi.h"
 
+wxWindow* m_window;
+
 enum {
   ID_VDR_LOAD = wxID_HIGHEST + 1,
   ID_VDR_PLAY_PAUSE,
