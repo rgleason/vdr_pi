@@ -40,21 +40,20 @@ EVT_COMMAND_SCROLL_THUMBTRACK(ID_VDR_PROGRESS,
                               VDRControl::OnProgressSliderUpdated)
 EVT_COMMAND_SCROLL_THUMBRELEASE(ID_VDR_PROGRESS,
                                 VDRControl::OnProgressSliderEndDrag)
+#ifdef __ANDROID__
+EVT_LEFT_DOWN(wxMouseEventHandler(VDRControl::OnMouseEvent))
+EVT_LEFT_UP(wxMouseEventHandler(VDRControl::OnMouseEvent))
+EVT_MOTION(wxMouseEventHandler(VDRControl::OnMouseEvent))
+#endif
+
 END_EVENT_TABLE()
 
 #ifdef __ANDROID__
 
 m_binResize = false;
-
 g_Window = this;
-GetHandle()->setStyleSheet(qtStyleSheet);
-Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(VDRControl::OnMouseEvent));
-Connect(wxEVT_LEFT_UP, wxMouseEventHandler(VDRControl::OnMouseEvent));
-
-Connect(wxEVT_MOTION, wxMouseEventHandler(VDRControl::OnMouseEvent));
 
 #endif
-
 
 #ifdef __ANDROID__
 wxPoint g_startPos;
@@ -200,7 +199,6 @@ void VDRControl::OnContextMenu(wxContextMenuEvent& event) {
 }
 #endif  // End of Android functions for move/resize
 
-
 bool VDRControl::LoadFile(wxString currentFile) {
   bool status = true;
   wxString error;
@@ -271,8 +269,7 @@ void VDRControl::CreateControls() {
     double pixel_per_mm = wxGetDisplaySize().x / PlugInGetDisplaySizeMM();
     int min_touch_size = 7 * pixel_per_mm;
     buttonSize = std::max(buttonSize, min_touch_size);
-  }
-  else
+  } else
     buttonSize = std::max(buttonSize, 32);
 
 #ifdef __WXQT__
