@@ -252,7 +252,7 @@ VDRControl::VDRControl(wxWindow* parent, wxWindowID id, vdr_pi* vdr)
   #ifdef __ANDROID__
 
   m_binResize = false;
-  g_Window = m_window;
+  g_Window = this;
 
   Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(VDRControl::OnMouseEvent));
   Connect(wxEVT_LEFT_UP, wxMouseEventHandler(VDRControl::OnMouseEvent));
