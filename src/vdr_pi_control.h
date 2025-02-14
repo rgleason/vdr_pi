@@ -28,7 +28,7 @@
 #include "ocpn_plugin.h"
 
 #ifdef __ANDROID__
-//wxWindow* g_Window;
+// wxWindow* g_Window;
 #endif
 
 class vdr_pi;
@@ -94,7 +94,7 @@ public:
    */
   void UpdatePlaybackStatus(const wxString& status);
 
-  #ifdef __ANDROID__
+#ifdef __ANDROID__
   void OnContextMenu(wxContextMenuEvent& event);
   void OnContextMenuSelect(wxCommandEvent& event);
 
@@ -110,6 +110,9 @@ public:
 #endif
 
   int window_id;
+#ifdef __ANDROID__
+  wxWindow* g_Window = m_window;
+#endif
 
 private:
   /** Create and layout UI controls. */
@@ -185,8 +188,6 @@ private:
   wxStaticText* m_fileLabel;   //!< Label showing current filename
   wxStaticText* m_timeLabel;   //!< Label showing current timestamp
   vdr_pi* m_pvdr;              //!< Owner plugin instance
-
-
 
   bool m_isDragging;            //!< Flag indicating progress slider drag
   bool m_wasPlayingBeforeDrag;  //!< Playback state before drag started
