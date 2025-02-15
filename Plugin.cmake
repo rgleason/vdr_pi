@@ -12,15 +12,15 @@
 # -------- Options ----------
 
 set(OCPN_TEST_REPO
-    "opencpn/vdr-alpha"
+    "mike-rossiter/vdr-alpha"
     CACHE STRING "Default repository for untagged builds"
 )
 set(OCPN_BETA_REPO
-    "opencpn/vdr-beta"
+    "mike-rossiter/vdr-beta"
     CACHE STRING "Default repository for tagged builds matching 'beta'"
 )
 set(OCPN_RELEASE_REPO
-    "opencpn/vdr-prod"
+    "mike-rossiter/vdr-prod"
     CACHE STRING "Default repository for tagged builds not matching 'beta'"
 )
 option(VDR_USE_SVG "Use SVG graphics" ON)
@@ -31,7 +31,7 @@ option(VDR_USE_SVG "Use SVG graphics" ON)
 # -------  Plugin setup --------
 #
 set(PKG_NAME vdr_pi)
-set(PKG_VERSION  1.3.62.0)
+set(PKG_VERSION  1.4.0.0)
 set(PKG_PRERELEASE "")  # Empty, or a tag like 'beta'
 
 set(DISPLAY_NAME VDR)    # Dialogs, installer artifacts, ...
