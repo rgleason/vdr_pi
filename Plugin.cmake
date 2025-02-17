@@ -12,15 +12,15 @@
 # -------- Options ----------
 
 set(OCPN_TEST_REPO
-    "opencpn/vdr-alpha"
+    "mike-rossiter/vdr-alpha"
     CACHE STRING "Default repository for untagged builds"
 )
 set(OCPN_BETA_REPO
-    "opencpn/vdr-beta"
+    "mike-rossiter/vdr-beta"
     CACHE STRING "Default repository for tagged builds matching 'beta'"
 )
 set(OCPN_RELEASE_REPO
-    "opencpn/vdr-prod"
+    "mike-rossiter/vdr-prod"
     CACHE STRING "Default repository for tagged builds not matching 'beta'"
 )
 
