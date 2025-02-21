@@ -2,9 +2,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: opencpn\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-01 14:18-0600\n"
-"PO-Revision-Date: 2020-03-09 15:26\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"POT-Creation-Date: 2025-02-15 22:37+0100\n"
+"PO-Revision-Date: 2025-02-20 16:15\n"
+"Last-Translator: \n"
 "Language-Team: Greek\n"
 "Language: el_GR\n"
 "MIME-Version: 1.0\n"
@@ -12,44 +12,285 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: opencpn\n"
+"X-Crowdin-Project-ID: 49843\n"
 "X-Crowdin-Language: el\n"
 "X-Crowdin-File: /plugins/vdr_pi/po/vdr_pi.pot\n"
+"X-Crowdin-File-ID: 124\n"
 
-#: src/vdr_pi.cpp:82
-msgid "Record"
-msgstr "Εγγραφή"
+#: src/vdr_pi.cpp:125
+msgid "VDR Record"
+msgstr ""
 
-#: src/vdr_pi.cpp:84
-msgid "Play"
-msgstr "Αναπαραγωγή"
+#: src/vdr_pi.cpp:129
+msgid "VDR Play"
+msgstr ""
 
-#: src/vdr_pi.cpp:151
+#: src/vdr_pi.cpp:204
 msgid "VDR"
 msgstr "VDR (ΚΔΤ)"
 
-#: src/vdr_pi.cpp:157
+#: src/vdr_pi.cpp:207
 msgid "Voyage Data Recorder plugin for OpenCPN"
 msgstr "Καταγραφικό δεδομένων ταξιδιού για το OpenCPN"
 
-#: src/vdr_pi.cpp:162
+#: src/vdr_pi.cpp:212
 msgid "Voyage Data Recorder plugin for OpenCPN\n"
 "Provides NMEA stream save and replay."
 msgstr "Καταγραφικό για Δεδεομένα Ταξιδιού (Voyage Data Recorder plugin) για το OpenCPN\n"
 "Καταγράφει τα δεδεομένα NMEA και τα αναπαράγει."
 
-#: src/vdr_pi.cpp:227 src/vdr_pi.cpp:261
-msgid "Choose a file"
-msgstr "Επιλέξτε αρχείο"
+#: src/vdr_pi.cpp:773
+msgid "Stop recording before starting playback."
+msgstr ""
 
-#: src/vdr_pi.cpp:242
-msgid "VDR replay"
-msgstr "Επανάληψη αναπαραγωγής VDR"
+#: src/vdr_pi.cpp:774 src/vdr_pi.cpp:829
+msgid "VDR Plugin"
+msgstr ""
 
-#: src/vdr_pi.cpp:339
+#: src/vdr_pi.cpp:809
+msgid "Voyage Data Recorder"
+msgstr ""
+
+#: src/vdr_pi.cpp:828
+msgid "Stop playback before starting recording."
+msgstr ""
+
+#: src/vdr_pi.cpp:1076
+msgid "No file selected."
+msgstr ""
+
+#: src/vdr_pi.cpp:1082
+msgid "File does not exist."
+msgstr ""
+
+#: src/vdr_pi.cpp:1096
+msgid "Failed to open file."
+msgstr ""
+
+#: src/vdr_pi.cpp:1513
+msgid "File not open"
+msgstr ""
+
+#: src/vdr_pi.cpp:1560
+msgid "Timestamps not in chronological order"
+msgstr ""
+
+#: src/vdr_pi.cpp:1640
+msgid "Invalid file"
+msgstr ""
+
+#: src/vdr_pi.cpp:1877
+msgid "Failed to open file: "
+msgstr ""
+
+#: src/vdr_pi_prefs_net.cpp:33
+msgid "Enable network output"
+msgstr ""
+
+#: src/vdr_pi_prefs_net.cpp:41
+msgid "Protocol:"
+msgstr ""
+
+#: src/vdr_pi_prefs_net.cpp:44
+msgid "TCP"
+msgstr ""
+
+#: src/vdr_pi_prefs_net.cpp:46
+msgid "UDP"
+msgstr ""
+
+#: src/vdr_pi_prefs_net.cpp:56
+msgid "Data Port:"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:62
+msgid "VDR Preferences"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:111
+msgid "Recording"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:112
+msgid "Replay"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:133
+msgid "Recording Protocols"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:137 src/vdr_pi_prefs.cpp:289
+msgid "NMEA 0183"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:141 src/vdr_pi_prefs.cpp:297
+msgid "NMEA 2000"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:146 src/vdr_pi_prefs.cpp:301
+msgid "Signal K"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:155
+msgid "Recording Format"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:158
+msgid "Raw NMEA"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:160
+msgid "CSV with timestamps"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:169
+msgid "Recording Directory"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:174
+msgid "Browse..."
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:194
+msgid "VDR File Management"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:198
+msgid "Create new VDR file every:"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:207
+msgid "hours"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:217
+msgid "Automatic Recording"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:222
+msgid "Automatically start recording"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:229
+msgid "When speed over ground exceeds"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:238
+msgid "knots"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:244
+msgid "Pause recording after"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:251
+msgid "minutes below speed threshold"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:267
+msgid "NMEA 0183 Replay Method"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:272
+msgid "Use internal API"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:275
+msgid "Use network connection (UDP/TCP)"
+msgstr ""
+
+#: src/vdr_pi_prefs.cpp:344
+msgid "Choose a directory"
+msgstr ""
+
+#: src/vdr_network.cpp:164
+msgid "TCP server init failed"
+msgstr ""
+
+#: src/vdr_network.cpp:195
+msgid "UDP socket init failed"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:49 src/vdr_pi_control.cpp:95
+#: src/vdr_pi_control.cpp:354
+msgid "Stopped"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:60
+msgid "File loaded successfully"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:93 src/vdr_pi_control.cpp:133
+#: src/vdr_pi_control.cpp:334
+msgid "No file loaded"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:121
+msgid "Settings"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:129
+msgid "Load VDR File"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:143
+msgid "Start Playback"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:144
+msgid "Pause Playback"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:145
+msgid "End of File"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:162 src/vdr_pi_control.cpp:230
+#: src/vdr_pi_control.cpp:327
+msgid "Date and Time: --"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:168
 msgid "Speed:"
 msgstr "Ταχύτητα:"
 
-#: src/vdr_pi.cpp:346
-msgid "Progress:"
-msgstr "Πρόοδος:"
+#: src/vdr_pi_control.cpp:177
+msgid "Status"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:182
+msgid "File: "
+msgstr ""
+
+#: src/vdr_pi_control.cpp:190
+msgid "Network: "
+msgstr ""
+
+#: src/vdr_pi_control.cpp:198
+msgid "Playback: "
+msgstr ""
+
+#: src/vdr_pi_control.cpp:208
+msgid "Date and Time: YYYY-MM-DD HH:MM:SS"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:247
+msgid "Select Playback File"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:303
+msgid "End of file"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:344
+msgid "Playing"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:349
+msgid "Paused"
+msgstr ""
+
+#: src/vdr_pi_control.cpp:360
+msgid "No file selected"
+msgstr ""
 
