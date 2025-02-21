@@ -110,6 +110,10 @@ image::vdr-control.png[]
 natural speed, while moving the slider to the far right equals fast
 forwarding. Please note that the setting under options/ships/calculate
 SOG will impact which SOG values are shown when playing fast forwarding.
+ - 1x sentences/messages are replayed at exactly the same original clock, i.e. real time. 2x is twice as fast. 
+ - 100x is 100 times faster than the recording rate.
+ - As replay speed gets higher, OpenCPN may not be able to keep up consuming sentences, which depends on the computer CPU, memory, whether other programs are running, how CPN is configured, what charts are displayed, the zoom level, etc. The VDR plugin ensures that the queue does not grow indefinitely by maintaining a max queue size.
+This makes it possible to replay at high speed to get a quick overview.
 * The lower part of the dialog shows the progress.
 * When recording, the VDR plugin includes all NMEA data available on the
 internal bus in OpenCPN. Even data not recognized or used by OpenCPN
