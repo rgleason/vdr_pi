@@ -48,13 +48,24 @@ Note: UTF-8 is backwards compatible with ASCII.
 #   - NMEA2000 on CAN0
 #   - SignalK server on TCP 10.0.0.1:3000
 
-timestamp,protocol,msg_type,source,raw_data
+received_at,protocol,msg_type,source,raw_data
 2024-02-16T10:00:00.123Z,NMEA0183,GPGGA,"COM3/NMEA0183/GP",$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
 ----
 
-== Required Fields
+== Required Header Fields
 
-=== timestamp
+=== timestamp_format
+* Required field specifying how timestamps are encoded
+* Valid values: 
+  - ISO8601 (Example: 2024-02-16T10:00:00.123Z)
+  - EPOCH_SECONDS (Example: 1708074000)
+  - EPOCH_MILLIS (Example: 1708074000123)
+* Must be specified in header comment for the file
+* All timestamps in the file must use the same format
+
+== Required CSV Fields
+
+=== received_at
 * Indicates when the message was received/logged by the system. Note this might be different from the time when the source instrument generated the data.
 * Timestamps are in ISO 8601 format – specifically the RFC 3339 extension format, which is slightly more strict than the ISO specification.
 * Timestamps have millisecond precision in UTC.
@@ -100,18 +111,9 @@ timestamp,protocol,msg_type,source,raw_data
   - NMEA2000: Hex bytes including header, CAN ID
   - SignalK: Complete JSON delta message with proper CSV escaping
 
-== Example
-[source,csv]
-----
-timestamp,protocol,msg_type,source,raw_data
-2024-02-16T10:00:00.123Z,NMEA0183,GPGGA,"COM3 Port 1",$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
-2024-02-16T10:00:00.234Z,NMEA2000,61184,"CAN Bus 1",18EF0003FF0300DD6789ABCD
-2024-02-16T10:00:00.345Z,SignalK,navigation.speedThroughWater,"TCP 10.0.0.1:3000","{""updates"":[{""values"":[{""path"":""navigation.speedThroughWater"",""value"":4.85}]}]}"
-----
-
 == Optional Fields
 
-=== source_timestamp
+=== sent_at
 * Optional timestamp from the source that generated the data, such as the instrument or gateway.
 * Same format as timestamp
 * Source depends on protocol:
@@ -140,11 +142,29 @@ High-fidelity logging enables:
 * Verification of data quality
 * Debugging of protocol implementations
 
-=== Examples of Preserved Issues
+== Examples of Timestamp Formats
 [source,csv]
 ----
-# Examples of various message issues that should be preserved
-timestamp,protocol,msg_type,source,raw_data
+# timestamp_format: ISO8601
+received_at,protocol,msg_type,source,raw_data
+2024-02-16T10:00:00.123Z,NMEA0183,GPGGA,"COM3 Port 1",$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
+2024-02-16T10:00:00.234Z,NMEA2000,61184,"CAN Bus 1",18EF0003FF0300DD6789ABCD
+2024-02-16T10:00:00.345Z,SignalK,navigation.speedThroughWater,"TCP 10.0.0.1:3000","{""updates"":[{""values"":[{""path"":""navigation.speedThroughWater"",""value"":4.85}]}]}"
+
+# timestamp_format: EPOCH_MILLIS  
+received_at,sent_at,protocol,source,msg_type,raw_data
+1708074000123,1708074000000,NMEA0183,"COM3 Port 1",GPGGA,...
+
+# timestamp_format: EPOCH_SECONDS
+received_at,sent_at,protocol,source,msg_type,raw_data  
+1708074000,1708073999,NMEA0183,"COM3 Port 1",GPGGA,...
+----
+
+== Examples of Preserved Issues
+[source,csv]
+----
+# timestamp_format: ISO8601
+received_at,protocol,msg_type,source,raw_data
 2024-02-16T10:00:00.123Z,NMEA0183,GPGGA,"COM3/NMEA0183/GP",$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*XX
 2024-02-16T10:00:00.124Z,NMEA0183,GPGG,"COM3/NMEA0183/GP",$GPGG@,123519,4807.
 2024-02-16T10:00:00.125Z,NMEA2000,61184,"CAN0/NMEA2000",18EF0003XX0300INVALID
