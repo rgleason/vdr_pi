@@ -102,13 +102,13 @@ void VDRControl::CreateControls() {
   // Ensure minimum button size of 7 mm for touch usability
   double pixel_per_mm = wxGetDisplaySize().x / PlugInGetDisplaySizeMM();
   m_buttonSize = 7 * pixel_per_mm;
-
 #ifdef __WXQT__
   // A simple way to get touch-compatible tool size
   wxRect tbRect = GetMasterToolbarRect();
   m_buttonSize = std::max(m_buttonSize, tbRect.width / 2);
 #endif
   wxSize buttonDimension(m_buttonSize, m_buttonSize);
+  int svg_size = m_buttonSize * OCPN_GetWinDIPScaleFactor();
 
   // File information section
   wxBoxSizer* fileSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -116,15 +116,15 @@ void VDRControl::CreateControls() {
   // Settings button
   m_settingsBtn = new wxBitmapButton(
       this, ID_VDR_SETTINGS,
-      GetBitmapFromSVGFile(_svg_settings, m_buttonSize, m_buttonSize),
-      wxDefaultPosition, buttonDimension, wxBU_EXACTFIT);
+      GetBitmapFromSVGFile(_svg_settings, svg_size, svg_size),
+      wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
   m_settingsBtn->SetToolTip(_("Settings"));
   fileSizer->Add(m_settingsBtn, 0, wxALL, 2);
 
   // Load button
   m_loadBtn = new wxBitmapButton(
       this, ID_VDR_LOAD,
-      GetBitmapFromSVGFile(_svg_file_open, m_buttonSize, m_buttonSize),
+      GetBitmapFromSVGFile(_svg_file_open, svg_size, svg_size),
       wxDefaultPosition, buttonDimension, wxBU_EXACTFIT);
   m_loadBtn->SetToolTip(_("Load VDR File"));
   fileSizer->Add(m_loadBtn, 0, wxALL, 2);
@@ -146,7 +146,7 @@ void VDRControl::CreateControls() {
 
   m_playPauseBtn = new wxBitmapButton(
       this, ID_VDR_PLAY_PAUSE,
-      GetBitmapFromSVGFile(_svg_play_circle, m_buttonSize, m_buttonSize),
+      GetBitmapFromSVGFile(_svg_play_circle, svg_size, svg_size),
       wxDefaultPosition, buttonDimension, wxBU_EXACTFIT);
   m_playPauseBtn->SetToolTip(m_playBtnTooltip);
   controlSizer->Add(m_playPauseBtn, 0, wxALL, 3);
