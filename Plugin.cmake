@@ -42,7 +42,7 @@ Save NMEA stream to a file.  Replay NMEA stream previously saved. Used to test p
 
 set(PKG_AUTHOR "Rick Gleason")
 set(PKG_IS_OPEN_SOURCE "yes")
-set(CPACK_PACKAGE_HOMEPAGE_URL https://github.com/rgleason/vdr_pi)
+set(PKG_HOMEPAGE_URL https://github.com/rgleason/vdr_pi)
 set(PKG_INFO_URL https://opencpn.org/OpenCPN/plugins/vdr.html)
 
 set(SRC
