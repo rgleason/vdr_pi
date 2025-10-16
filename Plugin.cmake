@@ -60,6 +60,8 @@ set(SRC
   src/vdr_pi_time.cpp
   src/vdr_network.h
   src/vdr_network.cpp
+  src/dm_replay_mgr.h
+  src/dm_replay_mgr.cpp
 )
 
 set(PKG_API_LIB api-18)  #  A directory in libs/ e. g., api-18 or api-19
@@ -67,6 +69,9 @@ set(PKG_API_LIB api-18)  #  A directory in libs/ e. g., api-18 or api-19
 macro(add_plugin_libraries)
   add_subdirectory(${CMAKE_SOURCE_DIR}/libs/fast-cpp-csv-parser)
   target_link_libraries(${PACKAGE_NAME} csv-parser::csv-parser)
+  add_subdirectory(${CMAKE_SOURCE_DIR}/libs/std_filesystem)
+  target_link_libraries(${PACKAGE_NAME} ocpn::filesystem)
+
   # Add libraries required by this plugin
 #  add_subdirectory("${CMAKE_SOURCE_DIR}/opencpn-libs/tinyxml")
 #  target_link_libraries(${PACKAGE_NAME} ocpn::tinyxml)

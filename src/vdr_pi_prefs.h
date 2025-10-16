@@ -151,6 +151,7 @@ private:
   // NMEA 0183 replay mode
   wxRadioButton* m_nmea0183NetworkRadio;
   wxRadioButton* m_nmea0183InternalRadio;
+  wxRadioButton* m_nmea0183LoopbackRadio;
 
   // Network selection
   ConnectionSettingsPanel* m_nmea0183NetPanel;

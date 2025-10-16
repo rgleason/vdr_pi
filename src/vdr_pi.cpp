@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cstdint>
+#include <memory>
 
 #include "ocpn_plugin.h"
 
@@ -39,6 +40,7 @@
 #include "vdr_pi_control.h"
 #include "vdr_pi.h"
 #include "icons.h"
+#include "dm_replay_mgr.h"
 
 // the class factories, used to create and destroy instances of the PlugIn
 
@@ -635,6 +637,11 @@ double vdr_pi::GetSpeedMultiplier() const {
 }
 
 void vdr_pi::Notify() {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+    unsigned delay = m_dm_replay_mgr.Notify();
+    if (delay != 0) m_timer->Start(delay, wxTIMER_ONE_SHOT);
+    return;
+  }
   if (!m_istream.IsOpened()) return;
 
   wxDateTime now = wxDateTime::UNow();
@@ -692,6 +699,7 @@ void vdr_pi::Notify() {
       msgHasTimestamp =
           m_timestampParser.ParseTimestamp(line, timestamp, precision);
     }
+
     if (!nmea.IsEmpty()) {
       if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::INTERNAL_API) {
         // Add sentence to buffer, maintaining max size.
@@ -1004,8 +1012,7 @@ void vdr_pi::StartRecording() {
   // Ensure directory exists
   if (!wxDirExists(m_recording_dir)) {
     if (!wxMkdir(m_recording_dir)) {
-      wxLogError("Failed to create recording directory: %s",
-                 m_recording_dir);
+      wxLogError("Failed to create recording directory: %s", m_recording_dir);
       return;
     }
   }

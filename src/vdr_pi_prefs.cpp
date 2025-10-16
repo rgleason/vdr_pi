@@ -21,6 +21,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  **************************************************************************/
+#include <cstdint>
 
 #include "vdr_pi_prefs_net.h"
 #include "vdr_pi_prefs.h"
@@ -34,7 +35,8 @@ enum {
   ID_NMEA2000_CHECK,
   ID_SIGNALK_CHECK,
   ID_NMEA0183_NETWORK_RADIO,
-  ID_NMEA0183_INTERNAL_RADIO
+  ID_NMEA0183_INTERNAL_RADIO,
+  ID_NMEA0183_LOOPBACK_RADIO
 };
 
 BEGIN_EVENT_TABLE(VDRPrefsDialog, wxDialog)
@@ -49,6 +51,8 @@ EVT_CHECKBOX(ID_NMEA2000_CHECK, VDRPrefsDialog::OnProtocolCheck)
 EVT_RADIOBUTTON(ID_NMEA0183_NETWORK_RADIO,
                 VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
 EVT_RADIOBUTTON(ID_NMEA0183_INTERNAL_RADIO,
+                VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
+EVT_RADIOBUTTON(ID_NMEA0183_LOOPBACK_RADIO,
                 VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
 END_EVENT_TABLE()
 
@@ -273,6 +277,9 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
       wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
   m_nmea0183NetworkRadio = new wxRadioButton(
       panel, ID_NMEA0183_NETWORK_RADIO, _("Use network connection (UDP/TCP)"));
+  m_nmea0183LoopbackRadio =
+      new wxRadioButton(panel, ID_NMEA0183_LOOPBACK_RADIO,
+                        _("Use loopback driver (experimental)"));
 
   m_nmea0183InternalRadio->SetValue(m_protocols.nmea0183ReplayMode ==
                                     NMEA0183ReplayMode::INTERNAL_API);
@@ -281,6 +288,7 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
 
   nmea0183Sizer->Add(m_nmea0183InternalRadio, 0, wxALL, 5);
   nmea0183Sizer->Add(m_nmea0183NetworkRadio, 0, wxALL, 5);
+  nmea0183Sizer->Add(m_nmea0183LoopbackRadio, 0, wxALL, 5);
   mainSizer->Add(nmea0183Sizer, 0, wxEXPAND | wxALL, 5);
 
   // Network settings
@@ -331,9 +339,12 @@ void VDRPrefsDialog::OnOK(wxCommandEvent& event) {
 #if 0
   m_protocols.signalKNet = m_signalKNetPanel->GetSettings();
 #endif
-  m_protocols.nmea0183ReplayMode = m_nmea0183InternalRadio->GetValue()
-                                       ? NMEA0183ReplayMode::INTERNAL_API
-                                       : NMEA0183ReplayMode::NETWORK;
+  if (m_nmea0183InternalRadio->GetValue())
+    m_protocols.nmea0183ReplayMode = NMEA0183ReplayMode::INTERNAL_API;
+  else if (m_nmea0183LoopbackRadio->GetValue())
+    m_protocols.nmea0183ReplayMode = NMEA0183ReplayMode::LOOPBACK;
+  else
+    m_protocols.nmea0183ReplayMode = NMEA0183ReplayMode::NETWORK;
 
   event.Skip();
 }
