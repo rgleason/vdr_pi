@@ -31,6 +31,7 @@
 
 #include <deque>
 #include <map>
+#include <memory>
 
 #include "wx/wxprec.h"
 
@@ -581,7 +582,7 @@ private:
   int m_tb_item_id_record;
   int m_tb_item_id_play;
 
-  DataMonitorReplayMgr m_dm_replay_mgr;
+  std::unique_ptr<DataMonitorReplayMgr> m_dm_replay_mgr;
 
   /** Configuration object for saving/loading settings. */
   wxFileConfig* m_pconfig;

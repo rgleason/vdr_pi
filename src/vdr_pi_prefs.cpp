@@ -285,6 +285,8 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
                                     NMEA0183ReplayMode::INTERNAL_API);
   m_nmea0183NetworkRadio->SetValue(m_protocols.nmea0183ReplayMode ==
                                    NMEA0183ReplayMode::NETWORK);
+  m_nmea0183LoopbackRadio->SetValue(m_protocols.nmea0183ReplayMode ==
+                                    NMEA0183ReplayMode::LOOPBACK);
 
   nmea0183Sizer->Add(m_nmea0183InternalRadio, 0, wxALL, 5);
   nmea0183Sizer->Add(m_nmea0183NetworkRadio, 0, wxALL, 5);

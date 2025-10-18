@@ -16,12 +16,19 @@
  **************************************************************************/
 
 #include <algorithm>
+#include <cassert>
+#include <cctype>
 #include <fstream>
+#include <iostream>  // debug junk
 #include <sstream>
 
 #include "dm_replay_mgr.h"
 #include "csv.h"
 #include "std_filesystem.h"
+
+using namespace std::chrono_literals;
+
+static constexpr auto kEpoch = ReplayTimepoint{};
 
 /** Return true if dh refers to a loopback driver */
 static bool IsLoopbackDriver(DriverHandle dh) {
@@ -43,27 +50,66 @@ static std::vector<DriverHandle> GetLoopbackDriver() {
 
 /** Send string to WriteCommDriver using given driver handle. */
 static void SendString(DriverHandle dh, const std::string& s) {
+  // std::cout << s << "\n";
   auto payload = std::make_shared<std::vector<uint8_t>>(s.begin(), s.end());
   WriteCommDriver(dh, payload);
 }
 
-DataMonitorReplayMgr::DataMonitorReplayMgr(const std::string& path_str)
-    : m_stream(path_str), m_csv_reader(path_str, m_stream) {
-  if (path_str == "") {
+/**
+ * fast_csv_reader byte source reading from file filtering blank and comment
+ * lines away. This should be done automagically by the reader, but I
+ * don't get it to work.
+ */
+class DataMonitorReplayMgr::FilteredByteSource : public io::ByteSourceBase {
+public:
+  FilteredByteSource(const std::string& path) : m_stream(path) {}
+
+  int read(char* returned, int scount) override {
+    assert(scount >= 0);
+    auto count = static_cast<size_t>(scount);
+    while (m_buff.size() < count && m_stream.good()) {
+      std::string line;
+      std::getline(m_stream, line);
+      while (!line.empty() && std::isspace(line[0])) line = line.substr(1);
+      if (line.empty()) continue;
+      if (line[0] == '#') continue;
+      m_buff.append(line + "\n");
+    }
+    std::streamsize length = std::min(count, m_buff.size());
+    std::memcpy(returned, m_buff.c_str(), length);
+    m_buff = m_buff.substr(length);
+    return length;
+  }
+
+  bool is_open() { return m_stream.is_open(); }
+
+private:
+  std::string m_buff;
+  std::ifstream m_stream;
+};
+
+DataMonitorReplayMgr::DataMonitorReplayMgr(
+    const std::string& path, std::function<void()> update_controls)
+    : m_csv_reader(path, std::make_unique<FilteredByteSource>(path)),
+      m_update_controls(std::move(update_controls)) {
+  if (path == "") {
     m_state = State::kNotInited;
     return;
   }
   m_state = State::kError;
-  if (!m_stream.is_open()) return;
   try {
     m_csv_reader.read_header(io::ignore_extra_column, "received_at", "protocol",
                              "msg_type", "source", "raw_data");
-  } catch (std::exception&) {
+  } catch (std::exception& e) {
+    std::cerr << "CSV init exception: " << e.what();
     return;
   }
+
   m_loopback_drivers = GetLoopbackDriver();
-  m_state = m_loopback_drivers.empty() ? State::kNoDriver : State::kAwaitLine1;
+  m_state = m_loopback_drivers.empty() ? State::kNoDriver : State::kIdle;
 }
+
+DataMonitorReplayMgr::~DataMonitorReplayMgr() = default;
 
 void DataMonitorReplayMgr::HandleSignalK(const std::string& context_self,
                                          const std::string& source,
@@ -102,7 +148,7 @@ void DataMonitorReplayMgr::HandleRow(const std::string& protocol,
 }
 
 int DataMonitorReplayMgr::Notify() {
-  if (m_state != State::kPlaying && m_state != State::kAwaitLine1) return 0;
+  if (m_state != State::kPlaying && m_state != State::kIdle) return -1;
   std::string received_at;
   std::string protocol;
   std::string msg_type;
@@ -113,7 +159,7 @@ int DataMonitorReplayMgr::Notify() {
   HandleRow(protocol, msg_type, source, raw_data);
   if (!there_is_more) {
     m_state = State::kEof;
-    return 0;
+    return -1;
   }
   std::chrono::milliseconds delay = ComputeDelay(received_at);
   return delay.count();
@@ -121,27 +167,32 @@ int DataMonitorReplayMgr::Notify() {
 
 std::chrono::milliseconds DataMonitorReplayMgr::ComputeDelay(
     const std::string& received_at) {
-
   using namespace std::chrono;
-  constexpr int kDefaultDelay = 100;
-  constexpr auto kEpoch = ReplayTimepoint{};
+  constexpr auto kDefaultDelay = 100ms;
 
   const ReplayTimepoint now = ReplayClock::now();
-  auto duration_from_start = duration_cast<milliseconds>(now - m_replay_start) +
-                             milliseconds(kDefaultDelay);
+  if (m_replay_start == kEpoch) m_replay_start = now;
+  auto duration_from_start =
+      duration_cast<milliseconds>(now - m_replay_start) + kDefaultDelay;
   ReplayTimepoint timestamp = kEpoch;
   try {
-    timestamp = kEpoch + milliseconds(std::stoi(received_at));
+    timestamp = kEpoch + milliseconds(std::stol(received_at));
+    if (m_first_timestamp == kEpoch) m_first_timestamp = timestamp;
     duration_from_start =
         duration_cast<milliseconds>(timestamp - m_first_timestamp);
   } catch (std::invalid_argument&) {
   } catch (std::out_of_range&) {
   }
-  if (m_state == State::kAwaitLine1 && timestamp != kEpoch) {
-    m_first_timestamp = timestamp;
-    m_replay_start = now;
-    m_state = State::kPlaying;
-  }
+  if (timestamp != kEpoch) m_current_timestamp = timestamp;
+  if (m_state == State::kIdle) m_state = State::kPlaying;
+
   const ReplayTimepoint replay_time = m_replay_start + duration_from_start;
+  if (replay_time <= now) return 0ms;  // catching up...
   return duration_cast<milliseconds>(replay_time - now);
+}
+
+uint64_t DataMonitorReplayMgr::GetCurrentTimestamp() {
+  using namespace std::chrono;
+  return static_cast<uint64_t>(
+      duration_cast<milliseconds>(m_current_timestamp - kEpoch).count());
 }

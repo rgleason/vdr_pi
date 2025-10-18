@@ -19,7 +19,10 @@
 #define Data_MonitoR_RePlaY_MgR_h
 
 #include <chrono>
+#include <cstdint>
 #include <fstream>
+#include <functional>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -33,38 +36,66 @@ using CsvReader =
 using ReplayClock = std::chrono::system_clock;
 using ReplayTimepoint = std::chrono::time_point<ReplayClock>;
 
+constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
+
 class DataMonitorReplayMgr {
 public:
-  /**
-   * Initiate playing from given log file path
-   */
-  DataMonitorReplayMgr(const std::string& path);
+  /** Create instance in idle state playing from given log file path.  */
+  DataMonitorReplayMgr(const std::string& path,
+                       std::function<void()> update_controls);
 
-  /**
-   * Create instance in idle state doing nothing
- . */
-  DataMonitorReplayMgr() : DataMonitorReplayMgr("") {}
+  /** Create instance in idle state doing nothing . */
+  DataMonitorReplayMgr() : DataMonitorReplayMgr("", [] {}) {}
+
+  ~DataMonitorReplayMgr();
+
+  /** Start playing file */
+  void Start() {
+    if (m_state == State::kIdle) Notify();
+  }
+
+  /** Pause playing... */
+  void Pause() {
+    if (m_state == State::kPlaying) m_state = State::kIdle;
+  }
 
   /*
-   * Handle data monitor logfile replay timer event
-   * @return Milliseconds to next tick. Values <= 0 means
-   *    that there should be no delay.
+   * Handle data monitor logfile replay timer tick, typically sending
+   * one message.
+   * @return Milliseconds to next message. Values < 0 means
+   *    there is nothing more to send. Value == 0 indicates
+   *    that we are catching up, next message shuld already have
+   *    been sent.
    */
   int Notify();
 
+  bool HasFile() const;
+
+  bool IsPlaying() const { return m_state == State::kPlaying; }
+
+  bool IsAtEnd() const { return m_state == State::kEof; }
+
+  /**
+   * Return currently played timestamp, milliseconds since 1/1 1970 or
+   * kMaxUint64 if nothing played.
+ . */
+  uint64_t GetCurrentTimestamp();
+
 private:
+  class FilteredByteSource;
   enum class State {
     kNotInited,
-    kAwaitLine1,
+    kIdle,
     kPlaying,
     kEof,
     kError,
     kNoDriver
   } m_state;
-  std::ifstream m_stream;
   CsvReader m_csv_reader;
-  ReplayTimepoint m_replay_start;     ///< When the replay started
-  ReplayTimepoint m_first_timestamp;  ///< First log line timestamp
+  ReplayTimepoint m_replay_start;       ///< When the replay started
+  ReplayTimepoint m_first_timestamp;    ///< First log line timestamp
+  ReplayTimepoint m_current_timestamp;  ///< Currently played timestamp
+  std::function<void()> m_update_controls;
 
   /** A single loopback driver or empty if none available. */
   std::vector<DriverHandle> m_loopback_drivers;
@@ -81,6 +112,12 @@ private:
   void HandleRow(const std::string& protocol, const std::string& msg_type,
                  const std::string& source, const std::string& raw_data);
 
+  /**
+   * Compute duration to next message to be sent <br>
+   * Side effects: Updates m_replay_start, m_first_timestamp,
+   * m_current_timestamp and m_state.
+   * @return Duration to next message.
+   */
   std::chrono::milliseconds ComputeDelay(const std::string& ms);
 };
 

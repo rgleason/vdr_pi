@@ -59,7 +59,9 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) { delete p; }
 wxDEFINE_EVENT(EVT_N2K, ObservedEvt);
 wxDEFINE_EVENT(EVT_SIGNALK, ObservedEvt);
 
-vdr_pi::vdr_pi(void* ppimgr) : opencpn_plugin_118(ppimgr) {
+vdr_pi::vdr_pi(void* ppimgr)
+    : opencpn_plugin_118(ppimgr),
+      m_dm_replay_mgr(std::make_unique<DataMonitorReplayMgr>()) {
   // Create the PlugIn icons
   initialize_images();
 
@@ -638,8 +640,8 @@ double vdr_pi::GetSpeedMultiplier() const {
 
 void vdr_pi::Notify() {
   if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
-    unsigned delay = m_dm_replay_mgr.Notify();
-    if (delay != 0) m_timer->Start(delay, wxTIMER_ONE_SHOT);
+    int delay = m_dm_replay_mgr->Notify();
+    if (delay >= 0) m_timer->Start(delay, wxTIMER_ONE_SHOT);
     return;
   }
   if (!m_istream.IsOpened()) return;
@@ -908,6 +910,7 @@ bool vdr_pi::LoadConfig(void) {
   int replayMode;
   pConf->Read(_T("NMEA0183ReplayMode"), &replayMode,
               static_cast<int>(NMEA0183ReplayMode::INTERNAL_API));
+  std::cout << "Reading replayMode: " << replayMode << "\n";
   m_protocols.nmea0183ReplayMode = static_cast<NMEA0183ReplayMode>(replayMode);
 
   // NMEA 0183 network settings
@@ -955,6 +958,8 @@ bool vdr_pi::SaveConfig(void) {
   pConf->Write(_T("EnableSignalK"), m_protocols.signalK);
 
   // Replay preferences.
+  std::cout << "Writing NMEA0183ReplayMode: "
+            << static_cast<int>(m_protocols.nmea0183ReplayMode) << "\n";
   pConf->Write(_T("NMEA0183ReplayMode"),
                static_cast<int>(m_protocols.nmea0183ReplayMode));
 
@@ -1088,6 +1093,13 @@ void vdr_pi::StartPlayback() {
     if (m_pvdrcontrol) {
       m_pvdrcontrol->UpdateFileStatus(_("File does not exist."));
     }
+    return;
+  }
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+    m_dm_replay_mgr = std::make_unique<DataMonitorReplayMgr>(
+        m_ifilename.ToStdString(), [&] { m_pvdrcontrol->UpdateControls(); });
+    m_dm_replay_mgr->Start();
+    Notify();
     return;
   }
 
@@ -1516,6 +1528,8 @@ void vdr_pi::SelectPrimaryTimeSource() {
 }
 
 bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return true;
   if (!m_istream.IsOpened()) {
     error = _("File not open");
     hasValidTimestamps = false;
