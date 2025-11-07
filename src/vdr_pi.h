@@ -216,9 +216,9 @@ public:
   /** Return whether recording is currently paused. */
   bool IsRecordingPaused() { return m_recording_paused; }
   /** Return whether playback is currently active. */
-  bool IsPlaying() { return m_playing; }
+  bool IsPlaying() const;
   /** Return whether the end of the playback file has been reached. */
-  bool IsAtFileEnd() const { return m_atFileEnd; }
+  bool IsAtFileEnd() const;
   void ResetEndOfFile() { m_atFileEnd = false; }
   /**
    * Calculate when the current NMEA/SignalK message should be played during
@@ -331,7 +331,7 @@ public:
   /** Get timestamp of last message in file. */
   wxDateTime GetLastTimestamp() const { return m_lastTimestamp; }
   /** Get timestamp at current playback position. */
-  wxDateTime GetCurrentTimestamp() const { return m_currentTimestamp; }
+  wxDateTime GetCurrentTimestamp() const;
   /**
    * Set timestamp for current playback position.
    * @param timestamp New current timestamp

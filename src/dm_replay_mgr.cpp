@@ -81,8 +81,6 @@ public:
     return length;
   }
 
-  bool is_open() { return m_stream.is_open(); }
-
 private:
   std::string m_buff;
   std::ifstream m_stream;
@@ -90,8 +88,10 @@ private:
 
 DataMonitorReplayMgr::DataMonitorReplayMgr(
     const std::string& path, std::function<void()> update_controls)
-    : m_csv_reader(path, std::make_unique<FilteredByteSource>(path)),
-      m_update_controls(std::move(update_controls)) {
+    : m_byte_source(new FilteredByteSource(path)),
+      m_csv_reader(path, std::unique_ptr<FilteredByteSource>(m_byte_source)),
+      m_update_controls(std::move(update_controls)),
+      m_file_size(path.empty() ? 0 : fs::file_size(path)) {
   if (path == "") {
     m_state = State::kNotInited;
     return;
@@ -104,7 +104,6 @@ DataMonitorReplayMgr::DataMonitorReplayMgr(
     std::cerr << "CSV init exception: " << e.what();
     return;
   }
-
   m_loopback_drivers = GetLoopbackDriver();
   m_state = m_loopback_drivers.empty() ? State::kNoDriver : State::kIdle;
 }
@@ -156,9 +155,12 @@ int DataMonitorReplayMgr::Notify() {
   std::string raw_data;
   bool there_is_more =
       m_csv_reader.read_row(received_at, protocol, msg_type, source, raw_data);
+  m_read_bytes += received_at.size() + protocol.size() + msg_type.size() +
+                  source.size() + raw_data.size() + 5;
   HandleRow(protocol, msg_type, source, raw_data);
   if (!there_is_more) {
     m_state = State::kEof;
+    m_update_controls();
     return -1;
   }
   std::chrono::milliseconds delay = ComputeDelay(received_at);
@@ -191,8 +193,12 @@ std::chrono::milliseconds DataMonitorReplayMgr::ComputeDelay(
   return duration_cast<milliseconds>(replay_time - now);
 }
 
-uint64_t DataMonitorReplayMgr::GetCurrentTimestamp() {
+uint64_t DataMonitorReplayMgr::GetCurrentTimestamp() const {
   using namespace std::chrono;
   return static_cast<uint64_t>(
       duration_cast<milliseconds>(m_current_timestamp - kEpoch).count());
+}
+
+double DataMonitorReplayMgr::GetProgressFraction() const {
+  return static_cast<double>(m_read_bytes) / m_file_size;
 }

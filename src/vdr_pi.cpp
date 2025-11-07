@@ -640,6 +640,7 @@ double vdr_pi::GetSpeedMultiplier() const {
 
 void vdr_pi::Notify() {
   if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+    if (m_pvdrcontrol) m_pvdrcontrol->SetProgress(GetProgressFraction());
     int delay = m_dm_replay_mgr->Notify();
     if (delay >= 0) m_timer->Start(delay, wxTIMER_ONE_SHOT);
     return;
@@ -826,6 +827,9 @@ void vdr_pi::OnToolbarToolCallback(int id) {
                                .Show(true);
       m_pauimgr->AddPane(m_pvdrcontrol, pane);
       m_pauimgr->Update();
+      if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+        m_pvdrcontrol->EnableSpeedSlider(false);
+      }
     } else {
       m_pauimgr->GetPane(m_pvdrcontrol)
           .Show(!m_pauimgr->GetPane(m_pvdrcontrol).IsShown());
@@ -855,6 +859,28 @@ void vdr_pi::OnToolbarToolCallback(int id) {
       }
     }
   }
+}
+
+bool vdr_pi::IsPlaying() const {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return m_dm_replay_mgr->IsPlaying();
+  return m_playing;
+}
+
+bool vdr_pi::IsAtFileEnd() const {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return m_dm_replay_mgr->IsAtEnd();
+  return m_atFileEnd;
+}
+
+wxDateTime vdr_pi::GetCurrentTimestamp() const {
+  if (m_protocols.nmea0183ReplayMode != NMEA0183ReplayMode::LOOPBACK)
+    return m_currentTimestamp;
+
+  uint64_t stamp = m_dm_replay_mgr->GetCurrentTimestamp();
+  wxDateTime date_time(time_t(stamp / 1000));
+  date_time.SetMillisecond(stamp % 1000);
+  return date_time;
 }
 
 void vdr_pi::SetColorScheme(PI_ColorScheme cs) {
@@ -910,7 +936,6 @@ bool vdr_pi::LoadConfig(void) {
   int replayMode;
   pConf->Read(_T("NMEA0183ReplayMode"), &replayMode,
               static_cast<int>(NMEA0183ReplayMode::INTERNAL_API));
-  std::cout << "Reading replayMode: " << replayMode << "\n";
   m_protocols.nmea0183ReplayMode = static_cast<NMEA0183ReplayMode>(replayMode);
 
   // NMEA 0183 network settings
@@ -958,8 +983,6 @@ bool vdr_pi::SaveConfig(void) {
   pConf->Write(_T("EnableSignalK"), m_protocols.signalK);
 
   // Replay preferences.
-  std::cout << "Writing NMEA0183ReplayMode: "
-            << static_cast<int>(m_protocols.nmea0183ReplayMode) << "\n";
   pConf->Write(_T("NMEA0183ReplayMode"),
                static_cast<int>(m_protocols.nmea0183ReplayMode));
 
@@ -1099,6 +1122,8 @@ void vdr_pi::StartPlayback() {
     m_dm_replay_mgr = std::make_unique<DataMonitorReplayMgr>(
         m_ifilename.ToStdString(), [&] { m_pvdrcontrol->UpdateControls(); });
     m_dm_replay_mgr->Start();
+    if (m_dm_replay_mgr->IsPlaying())
+      m_pvdrcontrol->UpdateFileStatus(_("File successfully loaded"));
     Notify();
     return;
   }
@@ -1832,6 +1857,9 @@ bool vdr_pi::HasValidTimestamps() const {
 }
 
 double vdr_pi::GetProgressFraction() const {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return m_dm_replay_mgr->GetProgressFraction();
+
   // For files with timestamps
   if (HasValidTimestamps()) {
     wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;

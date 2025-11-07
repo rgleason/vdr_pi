@@ -51,7 +51,10 @@ public:
 
   /** Start playing file */
   void Start() {
-    if (m_state == State::kIdle) Notify();
+    if (m_state == State::kIdle) {
+      m_read_bytes = 0;
+      Notify();
+    }
   }
 
   /** Pause playing... */
@@ -75,27 +78,39 @@ public:
 
   bool IsAtEnd() const { return m_state == State::kEof; }
 
+  double GetProgressFraction() const;
+
+  bool IsError() const { return m_state == State::kError; }
+
+  bool IsPaused() const { return m_state == State::kPaused; }
+
   /**
    * Return currently played timestamp, milliseconds since 1/1 1970 or
    * kMaxUint64 if nothing played.
  . */
-  uint64_t GetCurrentTimestamp();
+  uint64_t GetCurrentTimestamp() const;
 
 private:
   class FilteredByteSource;
+
   enum class State {
     kNotInited,
     kIdle,
     kPlaying,
+    kPaused,
     kEof,
     kError,
     kNoDriver
   } m_state;
+  std::ifstream m_stream;
+  FilteredByteSource* m_byte_source;
   CsvReader m_csv_reader;
   ReplayTimepoint m_replay_start;       ///< When the replay started
   ReplayTimepoint m_first_timestamp;    ///< First log line timestamp
   ReplayTimepoint m_current_timestamp;  ///< Currently played timestamp
   std::function<void()> m_update_controls;
+  const unsigned m_file_size;
+  unsigned m_read_bytes;
 
   /** A single loopback driver or empty if none available. */
   std::vector<DriverHandle> m_loopback_drivers;

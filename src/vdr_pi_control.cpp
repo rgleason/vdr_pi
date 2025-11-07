@@ -323,10 +323,12 @@ void VDRControl::UpdateControls() {
   if (hasFile && m_pvdr->GetCurrentTimestamp().IsValid()) {
     wxString timeStr =
         m_pvdr->GetCurrentTimestamp().ToUTC().Format("%Y-%m-%d %H:%M:%S UTC");
-    m_timeLabel->SetLabel("Date and Time: " + timeStr);
+    m_timeLabel->SetLabel(_("Date and Time: ") + timeStr);
   } else {
-    m_timeLabel->SetLabel(_("Date and Time: --"));
+    m_timeLabel->SetLabel(_("Date and Time: ") + "--");
   }
+
+  if (!isPlaying && isAtEnd) UpdatePlaybackStatus(_("Stopped"));
   Layout();
 }
 
