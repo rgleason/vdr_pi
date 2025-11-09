@@ -23,6 +23,7 @@
 #include "wx/wx.h"
 #endif  // precompiled headers
 
+#include "wx/app.h"
 #include "wx/tokenzr.h"
 #include "wx/statline.h"
 #include "wx/display.h"
@@ -760,6 +761,20 @@ void vdr_pi::Notify() {
   }
 }
 
+void vdr_pi::OnVdrMsg(VdrMsgType type, const std::string msg) {
+  switch (type) {
+    case VdrMsgType::kDebug:
+      wxLogDebug(wxString(msg));
+      break;
+    case VdrMsgType::kMessage:
+      wxLogMessage(wxString(msg));
+      break;
+    case VdrMsgType::kInfo:
+      OCPNMessageBox_PlugIn(wxTheApp->GetTopWindow(), msg);
+      break;
+  }
+}
+
 wxDateTime vdr_pi::GetNextPlaybackTime() const {
   if (!m_currentTimestamp.IsValid() || !m_firstTimestamp.IsValid() ||
       !m_playback_base_time.IsValid()) {
@@ -865,6 +880,12 @@ bool vdr_pi::IsPlaying() const {
   if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
     return m_dm_replay_mgr->IsPlaying();
   return m_playing;
+}
+
+bool vdr_pi::IsError() const {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return m_dm_replay_mgr->IsError();
+  return false;
 }
 
 bool vdr_pi::IsAtFileEnd() const {
@@ -1120,7 +1141,8 @@ void vdr_pi::StartPlayback() {
   }
   if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
     m_dm_replay_mgr = std::make_unique<DataMonitorReplayMgr>(
-        m_ifilename.ToStdString(), [&] { m_pvdrcontrol->UpdateControls(); });
+        m_ifilename.ToStdString(), [&] { m_pvdrcontrol->UpdateControls(); },
+        [&](VdrMsgType t, const std::string& s) { OnVdrMsg(t, s); });
     m_dm_replay_mgr->Start();
     if (m_dm_replay_mgr->IsPlaying())
       m_pvdrcontrol->UpdateFileStatus(_("File successfully loaded"));

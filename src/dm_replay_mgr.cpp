@@ -50,7 +50,6 @@ static std::vector<DriverHandle> GetLoopbackDriver() {
 
 /** Send string to WriteCommDriver using given driver handle. */
 static void SendString(DriverHandle dh, const std::string& s) {
-  // std::cout << s << "\n";
   auto payload = std::make_shared<std::vector<uint8_t>>(s.begin(), s.end());
   WriteCommDriver(dh, payload);
 }
@@ -87,11 +86,13 @@ private:
 };
 
 DataMonitorReplayMgr::DataMonitorReplayMgr(
-    const std::string& path, std::function<void()> update_controls)
+    const std::string& path, std::function<void()> update_controls,
+    VdrMsgCallback vdr_message)
     : m_byte_source(new FilteredByteSource(path)),
       m_csv_reader(path, std::unique_ptr<FilteredByteSource>(m_byte_source)),
       m_update_controls(std::move(update_controls)),
-      m_file_size(path.empty() ? 0 : fs::file_size(path)) {
+      m_file_size(path.empty() ? 0 : fs::file_size(path)),
+      m_vdr_message(std::move(vdr_message)) {
   if (path == "") {
     m_state = State::kNotInited;
     return;
@@ -100,8 +101,10 @@ DataMonitorReplayMgr::DataMonitorReplayMgr(
   try {
     m_csv_reader.read_header(io::ignore_extra_column, "received_at", "protocol",
                              "msg_type", "source", "raw_data");
-  } catch (std::exception& e) {
-    std::cerr << "CSV init exception: " << e.what();
+  } catch (io::error::base& e) {
+    std::string s(_("CSV header parse error: ").ToStdString() + e.what());
+    m_vdr_message(VdrMsgType::kInfo, s);
+    m_update_controls();
     return;
   }
   m_loopback_drivers = GetLoopbackDriver();
@@ -153,8 +156,14 @@ int DataMonitorReplayMgr::Notify() {
   std::string msg_type;
   std::string source;
   std::string raw_data;
-  bool there_is_more =
-      m_csv_reader.read_row(received_at, protocol, msg_type, source, raw_data);
+  bool there_is_more = false;
+  try {
+    there_is_more = m_csv_reader.read_row(received_at, protocol, msg_type,
+                                          source, raw_data);
+  } catch (io::error::base& err) {
+    m_vdr_message(VdrMsgType::kMessage, err.what());
+    return 0;
+  }
   m_read_bytes += received_at.size() + protocol.size() + msg_type.size() +
                   source.size() + raw_data.size() + 5;
   HandleRow(protocol, msg_type, source, raw_data);

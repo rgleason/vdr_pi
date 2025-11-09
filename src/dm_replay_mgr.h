@@ -29,6 +29,10 @@
 #include "csv.h"
 #include "ocpn_plugin.h"
 
+enum class VdrMsgType;  // forward
+
+using VdrMsgCallback = std::function<void(VdrMsgType, const std::string&)>;
+
 using CsvReader =
     io::CSVReader<5, io::trim_chars<' '>, io::double_quote_escape<',', '\"'>,
                   io::single_line_comment<'#'>>;
@@ -38,14 +42,20 @@ using ReplayTimepoint = std::chrono::time_point<ReplayClock>;
 
 constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
 
+/** Debug and Message are logged, Info is presented as a GUI dialog.  */
+enum class VdrMsgType { kDebug, kMessage, kInfo };
+
 class DataMonitorReplayMgr {
 public:
   /** Create instance in idle state playing from given log file path.  */
   DataMonitorReplayMgr(const std::string& path,
-                       std::function<void()> update_controls);
+                       std::function<void()> update_controls,
+                       VdrMsgCallback vdr_message);
 
   /** Create instance in idle state doing nothing . */
-  DataMonitorReplayMgr() : DataMonitorReplayMgr("", [] {}) {}
+  DataMonitorReplayMgr()
+      : DataMonitorReplayMgr(
+            "", [] {}, [](VdrMsgType, const std::string&) {}) {}
 
   ~DataMonitorReplayMgr();
 
@@ -102,7 +112,7 @@ private:
     kError,
     kNoDriver
   } m_state;
-  std::ifstream m_stream;
+
   FilteredByteSource* m_byte_source;
   CsvReader m_csv_reader;
   ReplayTimepoint m_replay_start;       ///< When the replay started
@@ -111,6 +121,7 @@ private:
   std::function<void()> m_update_controls;
   const unsigned m_file_size;
   unsigned m_read_bytes;
+  VdrMsgCallback m_vdr_message;
 
   /** A single loopback driver or empty if none available. */
   std::vector<DriverHandle> m_loopback_drivers;

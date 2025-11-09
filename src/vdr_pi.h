@@ -219,6 +219,10 @@ public:
   bool IsPlaying() const;
   /** Return whether the end of the playback file has been reached. */
   bool IsAtFileEnd() const;
+
+  /** Return true if blocking error encountered. */
+  bool IsError() const;
+
   void ResetEndOfFile() { m_atFileEnd = false; }
   /**
    * Calculate when the current NMEA/SignalK message should be played during
@@ -578,6 +582,9 @@ private:
    *
    */
   void HandleNetworkPlayback(const wxString& data);
+
+  /** Handle message callback from dm_replay_mgr et al.. */
+  void OnVdrMsg(VdrMsgType type, const std::string msg);
 
   int m_tb_item_id_record;
   int m_tb_item_id_play;

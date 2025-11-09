@@ -308,6 +308,7 @@ void VDRControl::UpdateControls() {
                              m_buttonSize, m_buttonSize));
     m_playPauseBtn->SetToolTip(isPlaying ? m_pauseBtnTooltip
                                          : m_playBtnTooltip);
+    if (m_pvdr->IsError()) UpdateFileStatus(_("Error"));
   }
 
   // Enable/disable controls based on state
@@ -344,7 +345,7 @@ void VDRControl::UpdateFileLabel(const wxString& filename) {
 
 void VDRControl::StartPlayback() {
   m_pvdr->StartPlayback();
-  UpdatePlaybackStatus(_("Playing"));
+  if (m_pvdr->IsPlaying()) UpdatePlaybackStatus(_("Playing"));
 }
 
 void VDRControl::PausePlayback() {
