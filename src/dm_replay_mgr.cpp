@@ -19,7 +19,6 @@
 #include <cassert>
 #include <cctype>
 #include <fstream>
-#include <iostream>  // debug junk
 #include <sstream>
 
 #include "dm_replay_mgr.h"
@@ -29,6 +28,12 @@
 using namespace std::chrono_literals;
 
 static constexpr auto kEpoch = ReplayTimepoint{};
+
+static const char* const kNoDriverMessage =
+    _(R"(I cannot find any loopback driver and is thus unable
+to replay VDR data. The probable cause is that OpenCPN
+is older than 5.14 -- such versions cannot be used to
+replay VDR data.)");
 
 /** Return true if dh refers to a loopback driver */
 static bool IsLoopbackDriver(DriverHandle dh) {
@@ -62,6 +67,7 @@ static void SendString(DriverHandle dh, const std::string& s) {
 class DataMonitorReplayMgr::FilteredByteSource : public io::ByteSourceBase {
 public:
   FilteredByteSource(const std::string& path) : m_stream(path) {}
+  ~FilteredByteSource() override = default;
 
   int read(char* returned, int scount) override {
     assert(scount >= 0);
@@ -88,15 +94,15 @@ private:
 DataMonitorReplayMgr::DataMonitorReplayMgr(
     const std::string& path, std::function<void()> update_controls,
     VdrMsgCallback vdr_message)
-    : m_byte_source(new FilteredByteSource(path)),
-      m_csv_reader(path, std::unique_ptr<FilteredByteSource>(m_byte_source)),
-      m_update_controls(std::move(update_controls)),
+    : m_state(State::kNotInited),
+      m_csv_reader(path, std::make_unique<FilteredByteSource>(path)),
       m_file_size(path.empty() ? 0 : fs::file_size(path)),
+      m_read_bytes(0),
+      m_update_controls(std::move(update_controls)),
       m_vdr_message(std::move(vdr_message)) {
-  if (path == "") {
-    m_state = State::kNotInited;
-    return;
-  }
+
+  if (path == "") return;
+
   m_state = State::kError;
   try {
     m_csv_reader.read_header(io::ignore_extra_column, "received_at", "protocol",
@@ -109,6 +115,8 @@ DataMonitorReplayMgr::DataMonitorReplayMgr(
   }
   m_loopback_drivers = GetLoopbackDriver();
   m_state = m_loopback_drivers.empty() ? State::kNoDriver : State::kIdle;
+  if (m_state == State::kNoDriver)
+    m_vdr_message(VdrMsgType::kInfo, kNoDriverMessage);
 }
 
 DataMonitorReplayMgr::~DataMonitorReplayMgr() = default;
@@ -135,6 +143,13 @@ void DataMonitorReplayMgr::Handle0183(const std::string& id,
   std::stringstream ss;
   ss << "nmea0183 " << source << " " << id << " " << sentence;
   SendString(m_loopback_drivers[0], ss.str());
+}
+
+void DataMonitorReplayMgr::Start() {
+  if (m_state == State::kIdle) m_read_bytes = 0;
+  if (m_state == State::kPaused || m_state == State::kIdle)
+    m_state = State::kPlaying;
+  Notify();
 }
 
 void DataMonitorReplayMgr::HandleRow(const std::string& protocol,

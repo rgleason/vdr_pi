@@ -586,6 +586,8 @@ private:
   /** Handle message callback from dm_replay_mgr et al.. */
   void OnVdrMsg(VdrMsgType type, const std::string msg);
 
+  std::unique_ptr<DataMonitorReplayMgr> DmReplayMgrFactory();
+
   int m_tb_item_id_record;
   int m_tb_item_id_play;
 

@@ -33,6 +33,7 @@ enum class VdrMsgType;  // forward
 
 using VdrMsgCallback = std::function<void(VdrMsgType, const std::string&)>;
 
+/** See libs/fast_csv_reader/fast_csv_reader/README.md */
 using CsvReader =
     io::CSVReader<5, io::trim_chars<' '>, io::double_quote_escape<',', '\"'>,
                   io::single_line_comment<'#'>>;
@@ -40,14 +41,20 @@ using CsvReader =
 using ReplayClock = std::chrono::system_clock;
 using ReplayTimepoint = std::chrono::time_point<ReplayClock>;
 
-constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
+static constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
 
-/** Debug and Message are logged, Info is presented as a GUI dialog.  */
+/** Debug and Message assumed to be logged, Info presented as a GUI dialog. */
 enum class VdrMsgType { kDebug, kMessage, kInfo };
 
+/** Handle replaying of data recorded by Data Monitor */
 class DataMonitorReplayMgr {
 public:
-  /** Create instance in idle state playing from given log file path.  */
+  /**
+   * Create instance in idle state playing from a log file.
+   * @param path Log file created by Data Monitor.
+   * @param update_controls Callback updating GUI based on current state.
+   * @vdr_message Callback handling user info.
+   */
   DataMonitorReplayMgr(const std::string& path,
                        std::function<void()> update_controls,
                        VdrMsgCallback vdr_message);
@@ -60,39 +67,37 @@ public:
   ~DataMonitorReplayMgr();
 
   /** Start playing file */
-  void Start() {
-    if (m_state == State::kIdle) m_read_bytes = 0;
-    if (m_state == State::kPaused || m_state == State::kIdle)
-      m_state = State::kPlaying;
-    Notify();
-  }
+  void Start();
 
-  /** Pause playing... */
+  /** Pause playing */
   void Pause() {
     if (m_state == State::kPlaying) m_state = State::kPaused;
   }
 
-  /*
+  /**
    * Handle data monitor logfile replay timer tick, typically sending
    * one message.
-   * @return Milliseconds to next message. Values < 0 means
+   * @return Milliseconds to next message. Value < 0 means
    *    there is nothing more to send. Value == 0 indicates
-   *    that we are catching up, next message shuld already have
+   *    that we are catching up, next message should already have
    *    been sent.
    */
   int Notify();
-
-  bool HasFile() const;
 
   bool IsPlaying() const { return m_state == State::kPlaying; }
 
   bool IsAtEnd() const { return m_state == State::kEof; }
 
-  double GetProgressFraction() const;
-
   bool IsError() const { return m_state == State::kError; }
 
+  bool IsIdle() const { return m_state == State::kIdle; }
+
   bool IsPaused() const { return m_state == State::kPaused; }
+
+  bool IsDriverMissing() const { return m_state == State::kNoDriver; }
+
+  /** Return how much of current file is played, number between 0 and 1. */
+  double GetProgressFraction() const;
 
   /**
    * Return currently played timestamp, milliseconds since 1/1 1970 or
@@ -101,6 +106,7 @@ public:
   uint64_t GetCurrentTimestamp() const;
 
 private:
+  /** CsvReader byte source handling comments and space. */
   class FilteredByteSource;
 
   enum class State {
@@ -113,14 +119,13 @@ private:
     kNoDriver
   } m_state;
 
-  FilteredByteSource* m_byte_source;
   CsvReader m_csv_reader;
   ReplayTimepoint m_replay_start;       ///< When the replay started
   ReplayTimepoint m_first_timestamp;    ///< First log line timestamp
   ReplayTimepoint m_current_timestamp;  ///< Currently played timestamp
-  std::function<void()> m_update_controls;
   const unsigned m_file_size;
   unsigned m_read_bytes;
+  std::function<void()> m_update_controls;
   VdrMsgCallback m_vdr_message;
 
   /** A single loopback driver or empty if none available. */
@@ -142,6 +147,7 @@ private:
    * Compute duration to next message to be sent <br>
    * Side effects: Updates m_replay_start, m_first_timestamp,
    * m_current_timestamp and m_state.
+   * @param ms Current processed logfile entry milliseconds timestamp.
    * @return Duration to next message.
    */
   std::chrono::milliseconds ComputeDelay(const std::string& ms);

@@ -1140,11 +1140,8 @@ void vdr_pi::StartPlayback() {
     return;
   }
   if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
-    if (!m_dm_replay_mgr->IsPaused()) {
-      m_dm_replay_mgr = std::make_unique<DataMonitorReplayMgr>(
-          m_ifilename.ToStdString(), [&] { m_pvdrcontrol->UpdateControls(); },
-          [&](VdrMsgType t, const std::string& s) { OnVdrMsg(t, s); });
-    }
+    if (!m_dm_replay_mgr->IsPaused())
+      m_dm_replay_mgr = std::move(DmReplayMgrFactory());
     m_dm_replay_mgr->Start();
     if (m_dm_replay_mgr->IsPlaying())
       m_pvdrcontrol->UpdateFileStatus(_("File successfully loaded"));
@@ -1934,13 +1931,26 @@ wxString vdr_pi::GetInputFile() const {
   return wxEmptyString;
 }
 
+std::unique_ptr<DataMonitorReplayMgr> vdr_pi::DmReplayMgrFactory() {
+  auto update_controls = [&] { m_pvdrcontrol->UpdateControls(); };
+  auto user_message = [&](VdrMsgType t, const std::string& s) {
+    OnVdrMsg(t, s);
+  };
+  return std::make_unique<DataMonitorReplayMgr>(m_ifilename.ToStdString(),
+                                                update_controls, user_message);
+}
+
 bool vdr_pi::LoadFile(const wxString& filename, wxString* error) {
   if (IsPlaying()) {
     StopPlayback();
   }
 
-  // Reset all file-related state
   m_ifilename = filename;
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+    m_dm_replay_mgr = std::move(DmReplayMgrFactory());
+  }
+
+  // Reset all file-related state
   m_is_csv_file = false;
   m_timestamp_idx = static_cast<unsigned int>(-1);
   m_message_idx = static_cast<unsigned int>(-1);
