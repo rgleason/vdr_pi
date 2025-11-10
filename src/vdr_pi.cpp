@@ -1140,9 +1140,11 @@ void vdr_pi::StartPlayback() {
     return;
   }
   if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
-    m_dm_replay_mgr = std::make_unique<DataMonitorReplayMgr>(
-        m_ifilename.ToStdString(), [&] { m_pvdrcontrol->UpdateControls(); },
-        [&](VdrMsgType t, const std::string& s) { OnVdrMsg(t, s); });
+    if (!m_dm_replay_mgr->IsPaused()) {
+      m_dm_replay_mgr = std::make_unique<DataMonitorReplayMgr>(
+          m_ifilename.ToStdString(), [&] { m_pvdrcontrol->UpdateControls(); },
+          [&](VdrMsgType t, const std::string& s) { OnVdrMsg(t, s); });
+    }
     m_dm_replay_mgr->Start();
     if (m_dm_replay_mgr->IsPlaying())
       m_pvdrcontrol->UpdateFileStatus(_("File successfully loaded"));
@@ -1189,6 +1191,12 @@ void vdr_pi::StartPlayback() {
 }
 
 void vdr_pi::PausePlayback() {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+    m_dm_replay_mgr->Pause();
+    if (m_pvdrcontrol) m_pvdrcontrol->UpdateControls();
+    return;
+  }
+
   if (!m_playing) return;
 
   m_timer->Stop();

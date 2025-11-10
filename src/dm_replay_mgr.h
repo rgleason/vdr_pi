@@ -61,15 +61,15 @@ public:
 
   /** Start playing file */
   void Start() {
-    if (m_state == State::kIdle) {
-      m_read_bytes = 0;
-      Notify();
-    }
+    if (m_state == State::kIdle) m_read_bytes = 0;
+    if (m_state == State::kPaused || m_state == State::kIdle)
+      m_state = State::kPlaying;
+    Notify();
   }
 
   /** Pause playing... */
   void Pause() {
-    if (m_state == State::kPlaying) m_state = State::kIdle;
+    if (m_state == State::kPlaying) m_state = State::kPaused;
   }
 
   /*
