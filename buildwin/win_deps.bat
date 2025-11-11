@@ -7,12 +7,18 @@
 ::
 
 :: Install the pathman tool: https://github.com/therootcompany/pathman
-:: Fix PATH so it can be used in this script
+:: Fix PATH so it can be used in this script.
+:: The regular installation using webi is broken since long, the root
+:: cause (pun intended) is broken https setup at https://rootprojects.org.
 ::
+set localbin="%HomeDrive%%HomePath%\.local\bin"
+set pathman_path="buildwin\pathman.exe"
+if not "%APPVEYOR_BUILD_FOLDER%" == "" (
+    set pathman_path="%APPVEYOR_BUILD_FOLDER%\%pathman_path%"
+)
 if not exist "%HomeDrive%%HomePath%\.local\bin\pathman.exe" (
-    pushd "%HomeDrive%%HomePath%"
-    curl.exe https://webi.ms/pathman | powershell
-    popd
+    if not exist %localbin% mkdir %localbin%
+    copy %pathman_path%  %localbin%
 )
 pathman list > nul 2>&1
 if errorlevel 1 set PATH=%PATH%;%HomeDrive%\%HomePath%\.local\bin
@@ -49,11 +55,11 @@ set wxWidgets_ROOT_DIR=%WXWIN%
 set wxWidgets_LIB_DIR=%WXWIN%\lib\vc_dll
 if not exist "%WXWIN%" (
   wget --version > nul 2>&1 || choco install --no-progress -y wget
-  wget https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.2.1/wxWidgets-3.2.2.1-headers.7z ^
+  wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6-headers.7z ^
       -O wxWidgetsHeaders.7z
-  wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.2.1/wxMSW-3.2.2_vc14x_ReleaseDLL.7z ^
+  wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxMSW-3.2.6_vc14x_ReleaseDLL.7z ^
       -O wxWidgetsDLL.7z
-  wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.2.1/wxMSW-3.2.2_vc14x_Dev.7z ^
+  wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxMSW-3.2.6_vc14x_Dev.7z ^
       -O wxWidgetsDev.7z
   7z i > nul 2>&1 || choco install -y 7zip
   7z x -aoa wxWidgetsHeaders.7z -o%WXWIN%
