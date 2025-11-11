@@ -112,6 +112,9 @@ public:
  . */
   uint64_t GetCurrentTimestamp() const;
 
+  /** Return true if file on path seems to be a Data Monitor VDR logfile */
+  static bool IsVdrFormat(const std::string& path);
+
 private:
   /** CsvReader byte source handling comments and space. */
   class FilteredByteSource;

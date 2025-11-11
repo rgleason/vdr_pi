@@ -210,3 +210,17 @@ uint64_t DataMonitorReplayMgr::GetCurrentTimestamp() const {
 double DataMonitorReplayMgr::GetProgressFraction() const {
   return static_cast<double>(m_log.read_bytes) / m_log.file_size;
 }
+
+bool DataMonitorReplayMgr::IsVdrFormat(const std::string& path) {
+  std::ifstream stream(path);
+  for (int i = 0; i < 5; ++i) {
+    if (!stream.good()) return false;
+    std::string line;
+    std::getline(stream, line);
+    if (line.find("timestamp_format") != std::string::npos &&
+        line.find("EPOCH_MILLIS") != std::string::npos) {
+      return true;
+    }
+  }
+  return false;
+}

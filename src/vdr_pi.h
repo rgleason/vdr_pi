@@ -463,6 +463,10 @@ public:
    */
   bool PlaybackMessage(const wxString& protocol, const wxString& message);
 
+  bool IsUsingLoopback() const {
+     return m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK;
+  }
+
 private:
   class TimerHandler : public wxTimer {
   public:
