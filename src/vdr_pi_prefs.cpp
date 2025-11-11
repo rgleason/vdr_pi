@@ -268,18 +268,18 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
   // Add network panels for each protocol
   // NMEA 0183 replay mode selection
   wxStaticBox* nmea0183Box =
-      new wxStaticBox(panel, wxID_ANY, _("NMEA 0183 Replay Method"));
+      new wxStaticBox(panel, wxID_ANY, _("Replay Method"));
   wxStaticBoxSizer* nmea0183Sizer =
       new wxStaticBoxSizer(nmea0183Box, wxVERTICAL);
 
   m_nmea0183InternalRadio = new wxRadioButton(
-      panel, ID_NMEA0183_INTERNAL_RADIO, _("Use internal API"),
+      panel, ID_NMEA0183_INTERNAL_RADIO, _("NMEA 0183 using internal API"),
       wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
   m_nmea0183NetworkRadio = new wxRadioButton(
-      panel, ID_NMEA0183_NETWORK_RADIO, _("Use network connection (UDP/TCP)"));
+      panel, ID_NMEA0183_NETWORK_RADIO, _("NMEA 0183 using network connection (UDP/TCP)"));
   m_nmea0183LoopbackRadio =
       new wxRadioButton(panel, ID_NMEA0183_LOOPBACK_RADIO,
-                        _("Use loopback driver (experimental)"));
+                        _("All messages using loopback driver (experimental)"));
 
   m_nmea0183InternalRadio->SetValue(m_protocols.nmea0183ReplayMode ==
                                     NMEA0183ReplayMode::INTERNAL_API);
@@ -302,9 +302,10 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
   // Enable/disable NMEA 0183 network panel based on replay mode
   m_nmea0183NetPanel->Enable(m_protocols.nmea0183ReplayMode ==
                              NMEA0183ReplayMode::NETWORK);
-
   m_nmea2000NetPanel =
       new ConnectionSettingsPanel(panel, _("NMEA 2000"), m_protocols.n2kNet);
+  m_nmea2000NetPanel->Enable(m_protocols.nmea0183ReplayMode !=
+                             NMEA0183ReplayMode::LOOPBACK);
   mainSizer->Add(m_nmea2000NetPanel, 0, wxEXPAND | wxALL, 5);
 
 #if 0  // Signal K support disabled for now
@@ -376,4 +377,5 @@ void VDRPrefsDialog::OnUseSpeedThresholdCheck(wxCommandEvent& event) {
 
 void VDRPrefsDialog::OnNMEA0183ReplayModeChanged(wxCommandEvent& event) {
   m_nmea0183NetPanel->Enable(event.GetId() == ID_NMEA0183_NETWORK_RADIO);
+  m_nmea2000NetPanel->Enable(event.GetId() != ID_NMEA0183_LOOPBACK_RADIO);
 }
