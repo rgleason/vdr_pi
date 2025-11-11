@@ -15,6 +15,12 @@
  *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
+/**
+ * \file
+ *
+ * Data Monitor log files replaying state.
+ */
+
 #ifndef Data_MonitoR_RePlaY_MgR_h
 #define Data_MonitoR_RePlaY_MgR_h
 
@@ -41,17 +47,18 @@ using CsvReader =
 using ReplayClock = std::chrono::system_clock;
 using ReplayTimepoint = std::chrono::time_point<ReplayClock>;
 
-static constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
-
 /** Debug and Message assumed to be logged, Info presented as a GUI dialog. */
 enum class VdrMsgType { kDebug, kMessage, kInfo };
 
-/** Handle replaying of data recorded by Data Monitor */
+/**
+ * Handle replaying of data recorded by Data Monitor. A model object, GUI
+ * interaction is handled by callbacks.
+ */
 class DataMonitorReplayMgr {
 public:
   /**
-   * Create instance in idle state playing from a log file.
-   * @param path Log file created by Data Monitor.
+   * Create instance  ready to play a log file.
+   * @param path Log file created by Data Monitor in VDR mode.
    * @param update_controls Callback updating GUI based on current state.
    * @vdr_message Callback handling user info.
    */
@@ -59,14 +66,14 @@ public:
                        std::function<void()> update_controls,
                        VdrMsgCallback vdr_message);
 
-  /** Create instance in idle state doing nothing . */
+  /** Create instance in idle state doing nothing. */
   DataMonitorReplayMgr()
       : DataMonitorReplayMgr(
             "", [] {}, [](VdrMsgType, const std::string&) {}) {}
 
   ~DataMonitorReplayMgr();
 
-  /** Start playing file */
+  /** Start or restart playing file */
   void Start();
 
   /** Pause playing */
@@ -100,8 +107,8 @@ public:
   double GetProgressFraction() const;
 
   /**
-   * Return currently played timestamp, milliseconds since 1/1 1970 or
-   * kMaxUint64 if nothing played.
+   * Return currently played timestamp, milliseconds since 1/1 1970.
+   * Undefined if nothing played.
  . */
   uint64_t GetCurrentTimestamp() const;
 
@@ -119,38 +126,35 @@ private:
     kNoDriver
   } m_state;
 
+  /** Status with respect to the logfile. */
+  struct Log {
+    ReplayTimepoint start_time;   ///< When the replay started
+    ReplayTimepoint first_stamp;  ///< First log line timestamp
+    ReplayTimepoint curr_stamp;   ///< Currently played timestamp
+    unsigned read_bytes;          ///< # read bytes so far
+    const unsigned file_size;
+
+    Log(unsigned _file_size) : read_bytes(0), file_size(_file_size) {}
+  } m_log;
+
   CsvReader m_csv_reader;
-  ReplayTimepoint m_replay_start;       ///< When the replay started
-  ReplayTimepoint m_first_timestamp;    ///< First log line timestamp
-  ReplayTimepoint m_current_timestamp;  ///< Currently played timestamp
-  const unsigned m_file_size;
-  unsigned m_read_bytes;
   std::function<void()> m_update_controls;
   VdrMsgCallback m_vdr_message;
 
   /** A single loopback driver or empty if none available. */
   std::vector<DriverHandle> m_loopback_drivers;
 
-  void HandleSignalK(const std::string& context_self, const std::string& source,
-                     const std::string& json);
-
-  void Handle2000(const std::string& pgn_str, const std::string& source,
-                  const std::string& raw_data);
-
-  void Handle0183(const std::string& id, const std::string& source,
-                  const std::string& sentence);
-
   void HandleRow(const std::string& protocol, const std::string& msg_type,
                  const std::string& source, const std::string& raw_data);
 
   /**
-   * Compute duration to next message to be sent <br>
-   * Side effects: Updates m_replay_start, m_first_timestamp,
-   * m_current_timestamp and m_state.
-   * @param ms Current processed logfile entry milliseconds timestamp.
+   * Compute duration to next message to be sent <br> and update
+   * log timestamps.
+   * @param ms Current processed logfile entry, milliseconds timestamp.
+   * @param log Current used timestamps
    * @return Duration to next message.
    */
-  std::chrono::milliseconds ComputeDelay(const std::string& ms);
+  std::chrono::milliseconds ComputeDelay(const std::string& ms, Log& log);
 };
 
 #endif  //  Data_MonitoR_RePlaY_MgR_h

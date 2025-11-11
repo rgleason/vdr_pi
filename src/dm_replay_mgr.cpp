@@ -15,6 +15,12 @@
  *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
+/**
+ * \file
+ *
+ * Implement dm_replay_mgr.h
+ */
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -27,7 +33,9 @@
 
 using namespace std::chrono_literals;
 
-static constexpr auto kEpoch = ReplayTimepoint{};
+static constexpr auto kEpoch = ReplayTimepoint{};   ///< 1/1 1970
+
+static constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
 
 static const char* const kNoDriverMessage =
     _(R"(I cannot find any loopback driver and is thus unable
@@ -51,12 +59,6 @@ static std::vector<DriverHandle> GetLoopbackDriver() {
                    [](DriverHandle dh) { return IsLoopbackDriver(dh); });
   if (handle != handles.end()) rv.push_back(*handle);
   return rv;
-}
-
-/** Send string to WriteCommDriver using given driver handle. */
-static void SendString(DriverHandle dh, const std::string& s) {
-  auto payload = std::make_shared<std::vector<uint8_t>>(s.begin(), s.end());
-  WriteCommDriver(dh, payload);
 }
 
 /**
@@ -95,22 +97,19 @@ DataMonitorReplayMgr::DataMonitorReplayMgr(
     const std::string& path, std::function<void()> update_controls,
     VdrMsgCallback vdr_message)
     : m_state(State::kNotInited),
+      m_log(path.empty() ? 0 : fs::file_size(path)),
       m_csv_reader(path, std::make_unique<FilteredByteSource>(path)),
-      m_file_size(path.empty() ? 0 : fs::file_size(path)),
-      m_read_bytes(0),
       m_update_controls(std::move(update_controls)),
       m_vdr_message(std::move(vdr_message)) {
-
   if (path == "") return;
 
-  m_state = State::kError;
   try {
     m_csv_reader.read_header(io::ignore_extra_column, "received_at", "protocol",
                              "msg_type", "source", "raw_data");
   } catch (io::error::base& e) {
+    m_state = State::kError;
     std::string s(_("CSV header parse error: ").ToStdString() + e.what());
     m_vdr_message(VdrMsgType::kInfo, s);
-    m_update_controls();
     return;
   }
   m_loopback_drivers = GetLoopbackDriver();
@@ -121,47 +120,30 @@ DataMonitorReplayMgr::DataMonitorReplayMgr(
 
 DataMonitorReplayMgr::~DataMonitorReplayMgr() = default;
 
-void DataMonitorReplayMgr::HandleSignalK(const std::string& context_self,
-                                         const std::string& source,
-                                         const std::string& json) {
-  std::stringstream ss;
-  ss << "signalk " << source << " " << context_self << " " << json;
-  SendString(m_loopback_drivers[0], ss.str());
-}
-
-void DataMonitorReplayMgr::Handle2000(const std::string& pgn,
-                                      const std::string& source,
-                                      const std::string& raw_data) {
-  std::stringstream ss;
-  ss << "nmea2000 " << source << " " << pgn << " " << raw_data;
-  SendString(m_loopback_drivers[0], ss.str());
-}
-
-void DataMonitorReplayMgr::Handle0183(const std::string& id,
-                                      const std::string& source,
-                                      const std::string& sentence) {
-  std::stringstream ss;
-  ss << "nmea0183 " << source << " " << id << " " << sentence;
-  SendString(m_loopback_drivers[0], ss.str());
-}
-
-void DataMonitorReplayMgr::Start() {
-  if (m_state == State::kIdle) m_read_bytes = 0;
-  if (m_state == State::kPaused || m_state == State::kIdle)
-    m_state = State::kPlaying;
-  Notify();
-}
-
 void DataMonitorReplayMgr::HandleRow(const std::string& protocol,
                                      const std::string& msg_type,
                                      const std::string& source,
                                      const std::string& raw_data) {
+  std::stringstream ss;
   if (protocol == "NMEA2000")
-    Handle2000(msg_type, source, raw_data);
+    ss << "nmea2000 " << source << " " << msg_type << " " << raw_data;
   else if (protocol == "NMEA0183")
-    Handle0183(msg_type, source, raw_data);
+    ss << "nmea0183 " << source << " " << msg_type << " " << raw_data;
   else if (protocol == "SignalK")
-    HandleSignalK(msg_type, source, raw_data);
+    ss << "signalk " << source << " " << msg_type << " " << raw_data;
+
+  const auto s = ss.str();
+  if (s.empty()) return;
+  auto payload =
+      std::make_shared<std::vector<uint8_t>>(s.begin(), s.end());
+  WriteCommDriver(m_loopback_drivers[0], payload);
+}
+
+void DataMonitorReplayMgr::Start() {
+  if (m_state == State::kIdle) m_log.read_bytes = 0;
+  if (m_state == State::kPaused || m_state == State::kIdle)
+    m_state = State::kPlaying;
+  Notify();
 }
 
 int DataMonitorReplayMgr::Notify() {
@@ -179,40 +161,42 @@ int DataMonitorReplayMgr::Notify() {
     m_vdr_message(VdrMsgType::kMessage, err.what());
     return 0;
   }
-  m_read_bytes += received_at.size() + protocol.size() + msg_type.size() +
-                  source.size() + raw_data.size() + 5;
+  m_log.read_bytes += received_at.size() + protocol.size() + msg_type.size() +
+                      source.size() + raw_data.size() + 5;
   HandleRow(protocol, msg_type, source, raw_data);
   if (!there_is_more) {
     m_state = State::kEof;
     m_update_controls();
     return -1;
   }
-  std::chrono::milliseconds delay = ComputeDelay(received_at);
+  if (m_state == State::kIdle) m_state = State::kPlaying;
+  std::chrono::milliseconds delay = ComputeDelay(received_at, m_log);
   return delay.count();
 }
 
 std::chrono::milliseconds DataMonitorReplayMgr::ComputeDelay(
-    const std::string& received_at) {
+    const std::string& received_at, Log& log) {
   using namespace std::chrono;
   constexpr auto kDefaultDelay = 100ms;
 
   const ReplayTimepoint now = ReplayClock::now();
-  if (m_replay_start == kEpoch) m_replay_start = now;
-  auto duration_from_start =
-      duration_cast<milliseconds>(now - m_replay_start) + kDefaultDelay;
+  if (log.start_time == kEpoch) log.start_time = now;
   ReplayTimepoint timestamp = kEpoch;
+  milliseconds duration_from_start;
   try {
     timestamp = kEpoch + milliseconds(std::stol(received_at));
-    if (m_first_timestamp == kEpoch) m_first_timestamp = timestamp;
+    if (log.first_stamp == kEpoch) log.first_stamp = timestamp;
     duration_from_start =
-        duration_cast<milliseconds>(timestamp - m_first_timestamp);
-  } catch (std::invalid_argument&) {
-  } catch (std::out_of_range&) {
+        duration_cast<milliseconds>(timestamp - log.first_stamp);
+  } catch (std::logic_error&) {
+    m_vdr_message(VdrMsgType::kDebug,
+                  std::string("Illegal timestamp: ") + received_at);
+    duration_from_start =
+        duration_cast<milliseconds>(now - log.start_time) + kDefaultDelay;
   }
-  if (timestamp != kEpoch) m_current_timestamp = timestamp;
-  if (m_state == State::kIdle) m_state = State::kPlaying;
+  if (timestamp != kEpoch) log.curr_stamp = timestamp;
 
-  const ReplayTimepoint replay_time = m_replay_start + duration_from_start;
+  const ReplayTimepoint replay_time = log.start_time + duration_from_start;
   if (replay_time <= now) return 0ms;  // catching up...
   return duration_cast<milliseconds>(replay_time - now);
 }
@@ -220,9 +204,9 @@ std::chrono::milliseconds DataMonitorReplayMgr::ComputeDelay(
 uint64_t DataMonitorReplayMgr::GetCurrentTimestamp() const {
   using namespace std::chrono;
   return static_cast<uint64_t>(
-      duration_cast<milliseconds>(m_current_timestamp - kEpoch).count());
+      duration_cast<milliseconds>(m_log.curr_stamp - kEpoch).count());
 }
 
 double DataMonitorReplayMgr::GetProgressFraction() const {
-  return static_cast<double>(m_read_bytes) / m_file_size;
+  return static_cast<double>(m_log.read_bytes) / m_log.file_size;
 }
