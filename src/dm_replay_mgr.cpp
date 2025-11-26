@@ -61,6 +61,16 @@ static std::vector<DriverHandle> GetLoopbackDriver() {
   return rv;
 }
 
+static ReplayTimepoint ParseTimeStamp(const std::string& stamp) {
+  const char* const format = "%a %b %d %H:%M:%S %Y";
+  std::istringstream is(stamp);
+  is.imbue(std::locale("en_US.utf-8"));
+  std::tm tm;
+  is >> std::get_time(&tm, format);
+  return ReplayClock::from_time_t(std::mktime(&tm));
+}
+
+
 /**
  * fast_csv_reader byte source reading from file filtering blank and comment
  * lines away. This should be done automagically by the reader, but I
@@ -93,11 +103,30 @@ private:
   std::ifstream m_stream;
 };
 
+DataMonitorReplayMgr::Log::Log(const std::string& path) {
+  std::ifstream stream(path);
+  if (!stream.good()) {
+    file_size = 0;
+    return;
+  }
+  for (int i = 0; i < 10 && stream.good(); ++i) {
+    std::string line;
+    std::getline(stream, line);
+    if (line.find("Created at:") == std::string::npos) continue;
+
+    size_t colon_pos = line.find(':');
+    std::string timestamp = line.substr(colon_pos + 1);
+    curr_stamp = ParseTimeStamp(timestamp);
+    break;
+  }
+  file_size = fs::file_size(path);
+}
+
 DataMonitorReplayMgr::DataMonitorReplayMgr(
     const std::string& path, std::function<void()> update_controls,
     VdrMsgCallback vdr_message)
     : m_state(State::kNotInited),
-      m_log(path.empty() ? 0 : fs::file_size(path)),
+      m_log(path),
       m_csv_reader(path, std::make_unique<FilteredByteSource>(path)),
       m_update_controls(std::move(update_controls)),
       m_vdr_message(std::move(vdr_message)) {

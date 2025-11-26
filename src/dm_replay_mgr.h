@@ -135,9 +135,10 @@ private:
     ReplayTimepoint first_stamp;  ///< First log line timestamp
     ReplayTimepoint curr_stamp;   ///< Currently played timestamp
     unsigned read_bytes;          ///< # read bytes so far
-    const unsigned file_size;
+    unsigned file_size;
 
     Log(unsigned _file_size) : read_bytes(0), file_size(_file_size) {}
+    Log(const std::string& path);
   } m_log;
 
   CsvReader m_csv_reader;
