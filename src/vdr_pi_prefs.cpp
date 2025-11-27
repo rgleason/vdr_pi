@@ -142,11 +142,9 @@ wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
   m_nmea2000Check->SetValue(m_protocols.nmea2000);
   protocolSizer->Add(m_nmea2000Check, 0, wxALL, 5);
 
-#if 0
   m_signalKCheck = new wxCheckBox(panel, ID_SIGNALK_CHECK, _("Signal K"));
   m_signalKCheck->SetValue(m_protocols.signalK);
   protocolSizer->Add(m_signalKCheck, 0, wxALL, 5);
-#endif
 
   mainSizer->Add(protocolSizer, 0, wxEXPAND | wxALL, 5);
 
@@ -297,11 +295,9 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
       new ConnectionSettingsPanel(panel, _("NMEA 2000"), m_protocols.n2kNet);
   mainSizer->Add(m_nmea2000NetPanel, 0, wxEXPAND | wxALL, 5);
 
-#if 0  // Signal K support disabled for now
-  m_signalKNetPanel = new ConnectionSettingsPanel(panel, _("Signal K"),
-                                              m_protocols.signalKNet);
+  m_signalKNetPanel =
+      new ConnectionSettingsPanel(panel, _("Signal K"), m_protocols.signalKNet);
   mainSizer->Add(m_signalKNetPanel, 0, wxEXPAND | wxALL, 5);
-#endif
 
   panel->SetSizer(mainSizer);
 
@@ -321,16 +317,12 @@ void VDRPrefsDialog::OnOK(wxCommandEvent& event) {
   // Protocol settings
   m_protocols.nmea0183 = m_nmea0183Check->GetValue();
   m_protocols.nmea2000 = m_nmea2000Check->GetValue();
-#if 0
   m_protocols.signalK = m_signalKCheck->GetValue();
-#endif
 
   // Network settings
   m_protocols.nmea0183Net = m_nmea0183NetPanel->GetSettings();
   m_protocols.n2kNet = m_nmea2000NetPanel->GetSettings();
-#if 0
   m_protocols.signalKNet = m_signalKNetPanel->GetSettings();
-#endif
   m_protocols.nmea0183ReplayMode = m_nmea0183InternalRadio->GetValue()
                                        ? NMEA0183ReplayMode::INTERNAL_API
                                        : NMEA0183ReplayMode::NETWORK;

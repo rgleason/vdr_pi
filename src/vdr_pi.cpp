@@ -26,6 +26,8 @@
 #include "wx/tokenzr.h"
 #include "wx/statline.h"
 #include "wx/display.h"
+#include "wx/jsonreader.h"
+#include "wx/jsonwriter.h"
 
 #include <map>
 #include <typeinfo>
@@ -220,6 +222,7 @@ void vdr_pi::UpdateSignalKListeners() {
                m_protocols.signalK);
   if (m_protocols.signalK) {
     // TODO: Implement SignalK configuration.
+    m_eventHandler->Bind(EVT_SIGNALK, &vdr_pi::OnSignalKEvent, this);
   }
 }
 
@@ -310,7 +313,57 @@ void vdr_pi::OnSignalKEvent(wxCommandEvent& event) {
     // SignalK recording is disabled.
     return;
   }
-  // TODO: Implement SignalK recording.
+#ifndef ANDROID
+  // Note: the plugin API 1.19 is not available on Android.
+  // When it is available, the ifndef condition can be removed.
+
+  ObservedEvt& ev = dynamic_cast<ObservedEvt&>(event);
+  auto ptr = GetSignalkPayload(ev);
+  const auto msg = *std::static_pointer_cast<const wxJSONValue>(ptr);
+
+  // Create a default empty JSON value
+  const wxJSONValue defaultValue;
+
+  const wxJSONValue& data = msg.Get("Data", defaultValue);
+  wxString context = msg.Get("Context", defaultValue).AsString();
+  wxString self = msg.Get("ContextSelf", defaultValue).AsString();
+
+  // Format message for recording
+  wxString formatted_message;
+  wxJSONWriter writer;
+  switch (m_data_format) {
+    case VDRDataFormat::CSV: {
+      // CSV format: timestamp,type,id,data
+      // Where 'id' is the SignalK context.
+      wxString timestamp = FormatIsoDateTime(wxDateTime::UNow());
+      wxString json_str;
+      writer.Write(data, json_str);  // Get full JSON representation
+      // Escape any commas in the JSON
+      json_str.Replace("\"", "\"\"");
+      formatted_message = wxString::Format("%s,SignalK,%s,\"%s\"\n", timestamp,
+                                           context, json_str);
+      break;
+    }
+    case VDRDataFormat::RawNMEA:
+      // $SKLL format (local format for SignalK):
+      // $SKLL,context,json_data*checksum
+      wxString json_str;
+      writer.Write(data, json_str);  // Get full JSON representation
+      formatted_message = wxString::Format("$SKLL,%s,%s", context, json_str);
+      // Add checksum
+      unsigned char checksum = 0;
+      for (size_t i = 1; i < formatted_message.length(); i++) {
+        checksum ^= static_cast<unsigned char>(formatted_message[i].GetValue());
+      }
+      formatted_message += wxString::Format("*%02X\r\n", checksum);
+      break;
+  }
+
+  // Check if we need to rotate the VDR file.
+  CheckLogRotation();
+
+  m_ostream.Write(formatted_message.ToStdString());
+#endif  // ANDROID
 }
 
 /**
@@ -912,12 +965,10 @@ bool vdr_pi::LoadConfig(void) {
   pConf->Read(_T("NMEA2000_Port"), &m_protocols.n2kNet.port, 10112);
   pConf->Read(_T("NMEA2000_Enabled"), &m_protocols.n2kNet.enabled, false);
 
-#if 0
   // Signal K network settings
   pConf->Read(_T("SignalK_UseTCP"), &m_protocols.signalKNet.useTCP, true);
   pConf->Read(_T("SignalK_Port"), &m_protocols.signalKNet.port, 8375);
   pConf->Read(_T("SignalK_Enabled"), &m_protocols.signalKNet.enabled, false);
-#endif
 
   return true;
 }
@@ -960,12 +1011,10 @@ bool vdr_pi::SaveConfig(void) {
   pConf->Write(_T("NMEA2000_Port"), m_protocols.n2kNet.port);
   pConf->Write(_T("NMEA2000_Enabled"), m_protocols.n2kNet.enabled);
 
-#if 0
   // Signal K network settings
   pConf->Write(_T("SignalK_UseTCP"), m_protocols.signalKNet.useTCP);
   pConf->Write(_T("SignalK_Port"), m_protocols.signalKNet.port);
   pConf->Write(_T("SignalK_Enabled"), m_protocols.signalKNet.enabled);
-#endif
 
   return true;
 }
