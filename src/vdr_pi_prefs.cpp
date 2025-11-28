@@ -203,9 +203,9 @@ wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
   m_logRotateCheck->SetValue(m_log_rotate);
 
   wxBoxSizer* intervalSizer = new wxBoxSizer(wxHORIZONTAL);
-  m_logRotateIntervalCtrl = new wxSpinCtrl(
-      panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-      wxSP_ARROW_KEYS, 1, 168, m_log_rotate_interval);
+  m_logRotateIntervalCtrl =
+      new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
+                     wxSP_ARROW_KEYS, 1, 168, m_log_rotate_interval);
   intervalSizer->Add(m_logRotateIntervalCtrl, 0,
                      wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
   intervalSizer->Add(new wxStaticText(panel, wxID_ANY, _("hours")), 0,
@@ -235,8 +235,8 @@ wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
   speedSizer->Add(m_useSpeedThresholdCheck, 0, wxALIGN_CENTER_VERTICAL);
 
   m_speedThresholdCtrl = new wxSpinCtrlDouble(
-      panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-      wxSP_ARROW_KEYS, 0.0, 20.0, m_speed_threshold, 0.1);
+      panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS,
+      0.0, 20.0, m_speed_threshold, 0.1);
   speedSizer->Add(m_speedThresholdCtrl, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT,
                   5);
   speedSizer->Add(new wxStaticText(panel, wxID_ANY, _("knots")), 0,
@@ -248,8 +248,8 @@ wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
   delaySizer->Add(new wxStaticText(panel, wxID_ANY, _("Pause recording after")),
                   0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
   m_stopDelayCtrl =
-      new wxSpinCtrl(panel, wxID_ANY, wxEmptyString, wxDefaultPosition,
-                     wxDefaultSize, wxSP_ARROW_KEYS, 1, 60, m_stop_delay);
+      new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
+                     wxSP_ARROW_KEYS, 1, 60, m_stop_delay);
   delaySizer->Add(m_stopDelayCtrl, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
   delaySizer->Add(
       new wxStaticText(panel, wxID_ANY, _("minutes below speed threshold")), 0,

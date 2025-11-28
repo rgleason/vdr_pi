@@ -65,7 +65,7 @@ bool VDRNetworkServer::Start(bool useTCP, int port, wxString& error) {
 
   if (success) {
     m_running = true;
-    error = wxEmptyString;
+    error = "";
     wxLogMessage("VDR Network Server started - %s on port %d",
                  m_useTCP ? "TCP" : "UDP", m_port);
   }
@@ -173,7 +173,7 @@ bool VDRNetworkServer::InitTCP(int port, wxString& error) {
   m_tcpServer->SetNotify(wxSOCKET_CONNECTION_FLAG);
   // Enable the event notifications.
   m_tcpServer->Notify(true);
-  error = wxEmptyString;
+  error = "";
   wxLogMessage("TCP server initialized on port %d", port);
   return true;
 }
@@ -198,7 +198,7 @@ bool VDRNetworkServer::InitUDP(int port, wxString& error) {
     m_udpSocket = nullptr;
     return false;
   }
-  error = wxEmptyString;
+  error = "";
   wxLogMessage("UDP server initialized on port %d", port);
   return true;
 }
