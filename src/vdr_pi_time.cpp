@@ -16,6 +16,8 @@
  *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
+#include <ctime>
+
 #include "wx/wxprec.h"
 
 #ifndef WX_PRECOMP
@@ -23,8 +25,6 @@
 #endif
 
 #include "wx/tokenzr.h"
-
-#include <ctime>
 
 #include "vdr_pi_time.h"
 

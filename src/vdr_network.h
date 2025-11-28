@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2011  Jean-Eudes Onfray                                 *
- *   Copyright (C) 2025  Sebastian Rosser                                  *
+ *   Copyright (C) 2025  Sebastian Rosset                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,11 +19,11 @@
 #ifndef VDR_NETWORK_H_
 #define VDR_NETWORK_H_
 
-#include <wx/wx.h>
-#include <wx/socket.h>
-
 #include <vector>
 #include <memory>
+
+#include <wx/wx.h>
+#include <wx/socket.h>
 
 // Forward declarations
 class wxSocketServer;

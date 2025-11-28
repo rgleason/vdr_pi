@@ -21,6 +21,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <string>
 
 #include "wx/wxprec.h"
 
@@ -39,8 +40,6 @@
 #include "vdr_network.h"
 #include "config.h"
 #include "dm_replay_mgr.h"
-
-#include <string>
 
 // Request default positioning of toolbar tool
 static constexpr int kVdrToolPosition = -1;

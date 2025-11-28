@@ -15,6 +15,13 @@
  *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
+#include <algorithm>
+#include <cstdint>
+#include <cstring>
+#include <map>
+#include <memory>
+#include <typeinfo>
+
 #include "wx/wxprec.h"
 
 #ifndef WX_PRECOMP
@@ -24,13 +31,6 @@
 #include "wx/app.h"
 #include "wx/tokenzr.h"
 #include "wx/display.h"
-
-#include <map>
-#include <typeinfo>
-#include <algorithm>
-#include <cstring>
-#include <cstdint>
-#include <memory>
 
 #include "ocpn_plugin.h"
 
