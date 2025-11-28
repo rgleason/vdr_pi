@@ -32,45 +32,45 @@ void initialize_images(void) {
   wxString tmp_path;
   tmp_path = GetPluginDataDir("vdr_pi");
   fn.SetPath(tmp_path);
-  fn.AppendDir(_T("data"));
+  fn.AppendDir("data");
 
-  fn.SetFullName(_T("vdr_pi.svg"));
+  fn.SetFullName("vdr_pi.svg");
   _svg_vdr = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_play.svg"));
+  fn.SetFullName("vdr_play.svg");
   _svg_vdr_play = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_record.svg"));
+  fn.SetFullName("vdr_record.svg");
   _svg_vdr_record = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_play_rollover.svg"));
+  fn.SetFullName("vdr_play_rollover.svg");
   _svg_play_rollover = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_play_toggled.svg"));
+  fn.SetFullName("vdr_play_toggled.svg");
   _svg_play_toggled = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_record_rollover.svg"));
+  fn.SetFullName("vdr_record_rollover.svg");
   _svg_record_rollover = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_record_toggled.svg"));
+  fn.SetFullName("vdr_record_toggled.svg");
   _svg_record_toggled = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_settings.svg"));
+  fn.SetFullName("vdr_settings.svg");
   _svg_settings = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_file_open.svg"));
+  fn.SetFullName("vdr_file_open.svg");
   _svg_file_open = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_play_circle.svg"));
+  fn.SetFullName("vdr_play_circle.svg");
   _svg_play_circle = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_pause_circle.svg"));
+  fn.SetFullName("vdr_pause_circle.svg");
   _svg_pause_circle = fn.GetFullPath();
 
-  fn.SetFullName(_T("vdr_stop_circle.svg"));
+  fn.SetFullName("vdr_stop_circle.svg");
   _svg_stop_circle = fn.GetFullPath();
 
-  wxLogMessage(_T("Loading toolbar icon: ") + _svg_record_toggled);
+  wxLogMessage("Loading toolbar icon: " + _svg_record_toggled);
 
   return;
 }
