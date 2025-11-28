@@ -57,9 +57,9 @@ ConnectionSettingsPanel::ConnectionSettingsPanel(
   portSizer->Add(new wxStaticText(this, wxID_ANY, _("Data Port:")), 0,
                  wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
 
-  m_portCtrl = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition,
-                              wxDefaultSize, wxSP_ARROW_KEYS, 1024, 65535,
-                              settings.port);
+  m_portCtrl =
+      new wxSpinCtrl(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
+                     wxSP_ARROW_KEYS, 1024, 65535, settings.port);
   portSizer->Add(m_portCtrl, 0, wxALIGN_CENTER_VERTICAL);
   sizer->Add(portSizer, 0, wxALL, 5);
 

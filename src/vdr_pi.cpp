@@ -125,13 +125,12 @@ int vdr_pi::Init(void) {
     SetToolbarToolStatus(m_tb_item_id_record, true);
   }
 
-  m_tb_item_id_record =
-      InsertPlugInToolSVG("VDR", _svg_vdr_record, _svg_record_toggled,
-                          _svg_record_toggled, wxITEM_CHECK, _("VDR Record"),
-                          "", NULL, VDR_TOOL_POSITION, 0, this);
+  m_tb_item_id_record = InsertPlugInToolSVG(
+      "VDR", _svg_vdr_record, _svg_record_toggled, _svg_record_toggled,
+      wxITEM_CHECK, _("VDR Record"), "", NULL, VDR_TOOL_POSITION, 0, this);
   m_tb_item_id_play = InsertPlugInToolSVG(
-      "VDR", _svg_vdr_play, _svg_play_toggled, _svg_play_toggled,
-      wxITEM_CHECK, _("VDR Play"), "", NULL, VDR_TOOL_POSITION, 0, this);
+      "VDR", _svg_vdr_play, _svg_play_toggled, _svg_play_toggled, wxITEM_CHECK,
+      _("VDR Play"), "", NULL, VDR_TOOL_POSITION, 0, this);
   m_recording = false;
 
   return (WANTS_TOOLBAR_CALLBACK | INSTALLS_TOOLBAR_TOOL | WANTS_CONFIG |
@@ -923,8 +922,8 @@ bool vdr_pi::LoadConfig(void) {
   if (!pConf) return false;
 
   pConf->SetPath("/PlugIns/VDR");
-  pConf->Read("InputFilename", &m_ifilename, wxEmptyString);
-  pConf->Read("OutputFilename", &m_ofilename, wxEmptyString);
+  pConf->Read("InputFilename", &m_ifilename, "");
+  pConf->Read("OutputFilename", &m_ofilename, "");
 
   // Default directory handling based on platform
 #ifdef __ANDROID__
@@ -949,8 +948,7 @@ bool vdr_pi::LoadConfig(void) {
   pConf->Read("EnableSignalK", &m_protocols.signalK, false);
 
   int format;
-  pConf->Read("DataFormat", &format,
-              static_cast<int>(VDRDataFormat::RawNMEA));
+  pConf->Read("DataFormat", &format, static_cast<int>(VDRDataFormat::RawNMEA));
   m_data_format = static_cast<VDRDataFormat>(format);
 
   // Replay preferences.
@@ -1214,7 +1212,7 @@ void vdr_pi::StopPlayback() {
   if (m_pvdrcontrol) {
     m_pvdrcontrol->SetProgress(0);
     m_pvdrcontrol->UpdateControls();
-    m_pvdrcontrol->UpdateFileLabel(wxEmptyString);
+    m_pvdrcontrol->UpdateFileLabel("");
   }
 }
 
@@ -1289,7 +1287,7 @@ bool vdr_pi::InitializeNetworkServers() {
     if (!success) {
       m_pvdrcontrol->UpdateNetworkStatus(errors);
     } else {
-      m_pvdrcontrol->UpdateNetworkStatus(wxEmptyString);
+      m_pvdrcontrol->UpdateNetworkStatus("");
     }
   }
 
@@ -1605,7 +1603,7 @@ bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
     wxLogMessage("File is empty or contains only empty lines");
     hasValidTimestamps = false;
     // Empty file is not an error.
-    error = wxEmptyString;
+    error = "";
     return true;
   }
   m_timestampParser.Reset();
@@ -1756,12 +1754,12 @@ bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
   // playback. In this case, we will still allow playback based on line
   // number.
   hasValidTimestamps = m_has_timestamps;
-  error = wxEmptyString;
+  error = "";
   return true;
 }
 
 wxString vdr_pi::GetNextNonEmptyLine(bool fromStart) {
-  if (!m_istream.IsOpened()) return wxEmptyString;
+  if (!m_istream.IsOpened()) return "";
 
   wxString line;
   if (fromStart) {
@@ -1928,7 +1926,7 @@ wxString vdr_pi::GetInputFile() const {
       return m_ifilename;
     }
   }
-  return wxEmptyString;
+  return "";
 }
 
 std::unique_ptr<DataMonitorReplayMgr> vdr_pi::DmReplayMgrFactory() {

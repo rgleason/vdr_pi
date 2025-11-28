@@ -59,7 +59,7 @@ bool VDRControl::LoadFile(wxString currentFile) {
   bool status = true;
   wxString error;
   UpdatePlaybackStatus(_("Stopped"));
-  UpdateNetworkStatus(wxEmptyString);
+  UpdateNetworkStatus("");
   if (m_pvdr->LoadFile(currentFile, &error)) {
     bool hasValidTimestamps;
     wxString error;
@@ -76,7 +76,7 @@ bool VDRControl::LoadFile(wxString currentFile) {
   } else {
     // If loading fails, clear the saved filename
     m_pvdr->ClearInputFile();
-    UpdateFileLabel(wxEmptyString);
+    UpdateFileLabel("");
     UpdateFileStatus(error);
     UpdateControls();
     status = false;
@@ -193,7 +193,7 @@ void VDRControl::CreateControls() {
   wxBoxSizer* fileStatusSizer = new wxBoxSizer(wxHORIZONTAL);
   fileStatusSizer->Add(new wxStaticText(this, wxID_ANY, _("File: ")), 0,
                        wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-  m_fileStatusLabel = new wxStaticText(this, wxID_ANY, wxEmptyString);
+  m_fileStatusLabel = new wxStaticText(this, wxID_ANY, "");
   fileStatusSizer->Add(m_fileStatusLabel, 1, wxALIGN_CENTER_VERTICAL);
   statusSizer->Add(fileStatusSizer, 0, wxEXPAND | wxALL, 5);
 
@@ -201,7 +201,7 @@ void VDRControl::CreateControls() {
   wxBoxSizer* networkStatusSizer = new wxBoxSizer(wxHORIZONTAL);
   networkStatusSizer->Add(new wxStaticText(this, wxID_ANY, _("Network: ")), 0,
                           wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-  m_networkStatusLabel = new wxStaticText(this, wxID_ANY, wxEmptyString);
+  m_networkStatusLabel = new wxStaticText(this, wxID_ANY, "");
   networkStatusSizer->Add(m_networkStatusLabel, 1, wxALIGN_CENTER_VERTICAL);
   statusSizer->Add(networkStatusSizer, 0, wxEXPAND | wxALL, 5);
 
@@ -209,7 +209,7 @@ void VDRControl::CreateControls() {
   wxBoxSizer* playbackStatusSizer = new wxBoxSizer(wxHORIZONTAL);
   playbackStatusSizer->Add(new wxStaticText(this, wxID_ANY, _("Playback: ")), 0,
                            wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-  m_playbackStatusLabel = new wxStaticText(this, wxID_ANY, wxEmptyString);
+  m_playbackStatusLabel = new wxStaticText(this, wxID_ANY, "");
   playbackStatusSizer->Add(m_playbackStatusLabel, 1, wxALIGN_CENTER_VERTICAL);
   statusSizer->Add(playbackStatusSizer, 0, wxEXPAND | wxALL, 5);
 
@@ -250,7 +250,7 @@ void VDRControl::OnLoadButton(wxCommandEvent& event) {
   }
 
   wxString file;
-  wxString init_directory = wxEmptyString;
+  wxString init_directory = "";
 #ifdef __WXQT__
   init_directory = *GetpPrivateApplicationDataLocation();
 #endif

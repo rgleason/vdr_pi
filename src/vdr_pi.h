@@ -200,9 +200,9 @@ public:
   /** Start recording VDR data. */
   void StartRecording();
   /** Stop recording VDR data and close the VDR file. */
-  void StopRecording(const wxString& reason = wxEmptyString);
+  void StopRecording(const wxString& reason = "");
   /** Pause recording VDR data, retain the existing VDR file. */
-  void PauseRecording(const wxString& reason = wxEmptyString);
+  void PauseRecording(const wxString& reason = "");
   /** Resume recording using the same VDR file. */
   void ResumeRecording();
   /** Start playback of VDR data. */
