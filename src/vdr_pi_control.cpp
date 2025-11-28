@@ -86,12 +86,12 @@ bool VDRControl::LoadFile(wxString currentFile) {
 
 VDRControl::VDRControl(wxWindow* parent, wxWindowID id, vdr_pi* vdr)
     : wxWindow(parent, id, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE,
-               _T("VDR Control")),
+               "VDR Control"),
       m_pvdr(vdr),
       m_isDragging(false),
       m_wasPlayingBeforeDrag(false) {
   wxColour cl;
-  GetGlobalColor(_T("DILG1"), &cl);
+  GetGlobalColor("DILG1", &cl);
   SetBackgroundColour(cl);
 
   CreateControls();
@@ -257,7 +257,7 @@ void VDRControl::OnLoadButton(wxCommandEvent& event) {
 
   int response = PlatformFileSelectorDialog(GetOCPNCanvasWindow(), &file,
                                             _("Select Playback File"),
-                                            init_directory, _T(""), _T("*.*"));
+                                            init_directory, "", "*.*");
   if (response != wxID_OK) return;
 
   bool is_vdrfile = DataMonitorReplayMgr::IsVdrFormat(file.ToStdString());
@@ -431,7 +431,7 @@ void VDRControl::SetProgress(double fraction) {
 
 void VDRControl::SetColorScheme(PI_ColorScheme cs) {
   wxColour cl;
-  GetGlobalColor(_T("DILG1"), &cl);
+  GetGlobalColor("DILG1", &cl);
   SetBackgroundColour(cl);
 
   Refresh(false);

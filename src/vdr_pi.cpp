@@ -104,7 +104,7 @@ int vdr_pi::Init(void) {
   m_eventHandler = new wxEvtHandler();
   m_timer = new TimerHandler(this);
 
-  AddLocaleCatalog(_T("opencpn-vdr_pi"));
+  AddLocaleCatalog("opencpn-vdr_pi");
 
   // Get a pointer to the opencpn configuration object
   m_pconfig = GetOCPNConfigObject();
@@ -126,12 +126,12 @@ int vdr_pi::Init(void) {
   }
 
   m_tb_item_id_record =
-      InsertPlugInToolSVG(_T( "VDR" ), _svg_vdr_record, _svg_record_toggled,
+      InsertPlugInToolSVG("VDR", _svg_vdr_record, _svg_record_toggled,
                           _svg_record_toggled, wxITEM_CHECK, _("VDR Record"),
-                          _T( "" ), NULL, VDR_TOOL_POSITION, 0, this);
+                          "", NULL, VDR_TOOL_POSITION, 0, this);
   m_tb_item_id_play = InsertPlugInToolSVG(
-      _T( "VDR" ), _svg_vdr_play, _svg_play_toggled, _svg_play_toggled,
-      wxITEM_CHECK, _("VDR Play"), _T( "" ), NULL, VDR_TOOL_POSITION, 0, this);
+      "VDR", _svg_vdr_play, _svg_play_toggled, _svg_play_toggled,
+      wxITEM_CHECK, _("VDR Play"), "", NULL, VDR_TOOL_POSITION, 0, this);
   m_recording = false;
 
   return (WANTS_TOOLBAR_CALLBACK | INSTALLS_TOOLBAR_TOOL | WANTS_CONFIG |
@@ -458,7 +458,7 @@ void vdr_pi::SetNMEASentence(wxString& sentence) {
   // There can be different talkers on the stream so look at the message type
   // irrespective of the talker.
   if (sentence.size() >= 6 && sentence.substr(3, 3) == "RMC") {
-    wxStringTokenizer tkz(sentence, wxT(","));
+    wxStringTokenizer tkz(sentence, ",");
     wxString token;
 
     // Skip to speed field (field 7), which is the speed over ground in knots.
@@ -831,7 +831,7 @@ void vdr_pi::OnToolbarToolCallback(int id) {
 
       m_pvdrcontrol = new VDRControl(GetOCPNCanvasWindow(), wxID_ANY, this);
       wxAuiPaneInfo pane = wxAuiPaneInfo()
-                               .Name(_T("VDR"))
+                               .Name("VDR")
                                .Caption(_("Voyage Data Recorder"))
                                .CaptionVisible(true)
                                .Float()
@@ -922,9 +922,9 @@ bool vdr_pi::LoadConfig(void) {
 
   if (!pConf) return false;
 
-  pConf->SetPath(_T("/PlugIns/VDR"));
-  pConf->Read(_T("InputFilename"), &m_ifilename, wxEmptyString);
-  pConf->Read(_T("OutputFilename"), &m_ofilename, wxEmptyString);
+  pConf->SetPath("/PlugIns/VDR");
+  pConf->Read("InputFilename", &m_ifilename, wxEmptyString);
+  pConf->Read("OutputFilename", &m_ofilename, wxEmptyString);
 
   // Default directory handling based on platform
 #ifdef __ANDROID__
@@ -935,45 +935,45 @@ bool vdr_pi::LoadConfig(void) {
 #endif
 
   // Recording preferences.
-  pConf->Read(_T("RecordingDirectory"), &m_recording_dir, defaultDir);
-  pConf->Read(_T("Interval"), &m_interval, 1000);
-  pConf->Read(_T("LogRotate"), &m_log_rotate, false);
-  pConf->Read(_T("LogRotateInterval"), &m_log_rotate_interval, 24);
-  pConf->Read(_T("AutoStartRecording"), &m_auto_start_recording, false);
-  pConf->Read(_T("UseSpeedThreshold"), &m_use_speed_threshold, false);
-  pConf->Read(_T("SpeedThreshold"), &m_speed_threshold, 0.5);
-  pConf->Read(_T("StopDelay"), &m_stop_delay, 10);  // Default 10 minutes
+  pConf->Read("RecordingDirectory", &m_recording_dir, defaultDir);
+  pConf->Read("Interval", &m_interval, 1000);
+  pConf->Read("LogRotate", &m_log_rotate, false);
+  pConf->Read("LogRotateInterval", &m_log_rotate_interval, 24);
+  pConf->Read("AutoStartRecording", &m_auto_start_recording, false);
+  pConf->Read("UseSpeedThreshold", &m_use_speed_threshold, false);
+  pConf->Read("SpeedThreshold", &m_speed_threshold, 0.5);
+  pConf->Read("StopDelay", &m_stop_delay, 10);  // Default 10 minutes
 
-  pConf->Read(_T("EnableNMEA0183"), &m_protocols.nmea0183, true);
-  pConf->Read(_T("EnableNMEA2000"), &m_protocols.nmea2000, false);
-  pConf->Read(_T("EnableSignalK"), &m_protocols.signalK, false);
+  pConf->Read("EnableNMEA0183", &m_protocols.nmea0183, true);
+  pConf->Read("EnableNMEA2000", &m_protocols.nmea2000, false);
+  pConf->Read("EnableSignalK", &m_protocols.signalK, false);
 
   int format;
-  pConf->Read(_T("DataFormat"), &format,
+  pConf->Read("DataFormat", &format,
               static_cast<int>(VDRDataFormat::RawNMEA));
   m_data_format = static_cast<VDRDataFormat>(format);
 
   // Replay preferences.
   int replayMode;
-  pConf->Read(_T("NMEA0183ReplayMode"), &replayMode,
+  pConf->Read("NMEA0183ReplayMode", &replayMode,
               static_cast<int>(NMEA0183ReplayMode::INTERNAL_API));
   m_protocols.nmea0183ReplayMode = static_cast<NMEA0183ReplayMode>(replayMode);
 
   // NMEA 0183 network settings
-  pConf->Read(_T("NMEA0183_UseTCP"), &m_protocols.nmea0183Net.useTCP, false);
-  pConf->Read(_T("NMEA0183_Port"), &m_protocols.nmea0183Net.port, 10111);
-  pConf->Read(_T("NMEA0183_Enabled"), &m_protocols.nmea0183Net.enabled, false);
+  pConf->Read("NMEA0183_UseTCP", &m_protocols.nmea0183Net.useTCP, false);
+  pConf->Read("NMEA0183_Port", &m_protocols.nmea0183Net.port, 10111);
+  pConf->Read("NMEA0183_Enabled", &m_protocols.nmea0183Net.enabled, false);
 
   // NMEA 2000 network settings
-  pConf->Read(_T("NMEA2000_UseTCP"), &m_protocols.n2kNet.useTCP, false);
-  pConf->Read(_T("NMEA2000_Port"), &m_protocols.n2kNet.port, 10112);
-  pConf->Read(_T("NMEA2000_Enabled"), &m_protocols.n2kNet.enabled, false);
+  pConf->Read("NMEA2000_UseTCP", &m_protocols.n2kNet.useTCP, false);
+  pConf->Read("NMEA2000_Port", &m_protocols.n2kNet.port, 10112);
+  pConf->Read("NMEA2000_Enabled", &m_protocols.n2kNet.enabled, false);
 
 #if 0
   // Signal K network settings
-  pConf->Read(_T("SignalK_UseTCP"), &m_protocols.signalKNet.useTCP, true);
-  pConf->Read(_T("SignalK_Port"), &m_protocols.signalKNet.port, 8375);
-  pConf->Read(_T("SignalK_Enabled"), &m_protocols.signalKNet.enabled, false);
+  pConf->Read("SignalK_UseTCP", &m_protocols.signalKNet.useTCP, true);
+  pConf->Read("SignalK_Port", &m_protocols.signalKNet.port, 8375);
+  pConf->Read("SignalK_Enabled", &m_protocols.signalKNet.enabled, false);
 #endif
 
   return true;
@@ -984,44 +984,44 @@ bool vdr_pi::SaveConfig(void) {
 
   if (!pConf) return false;
 
-  pConf->SetPath(_T("/PlugIns/VDR"));
+  pConf->SetPath("/PlugIns/VDR");
 
   // Recording preferences.
-  pConf->Write(_T("InputFilename"), m_ifilename);
-  pConf->Write(_T("OutputFilename"), m_ofilename);
-  pConf->Write(_T("RecordingDirectory"), m_recording_dir);
-  pConf->Write(_T("Interval"), m_interval);
-  pConf->Write(_T("LogRotate"), m_log_rotate);
-  pConf->Write(_T("LogRotateInterval"), m_log_rotate_interval);
-  pConf->Write(_T("AutoStartRecording"), m_auto_start_recording);
-  pConf->Write(_T("UseSpeedThreshold"), m_use_speed_threshold);
-  pConf->Write(_T("SpeedThreshold"), m_speed_threshold);
-  pConf->Write(_T("StopDelay"), m_stop_delay);
-  pConf->Write(_T("DataFormat"), static_cast<int>(m_data_format));
+  pConf->Write("InputFilename", m_ifilename);
+  pConf->Write("OutputFilename", m_ofilename);
+  pConf->Write("RecordingDirectory", m_recording_dir);
+  pConf->Write("Interval", m_interval);
+  pConf->Write("LogRotate", m_log_rotate);
+  pConf->Write("LogRotateInterval", m_log_rotate_interval);
+  pConf->Write("AutoStartRecording", m_auto_start_recording);
+  pConf->Write("UseSpeedThreshold", m_use_speed_threshold);
+  pConf->Write("SpeedThreshold", m_speed_threshold);
+  pConf->Write("StopDelay", m_stop_delay);
+  pConf->Write("DataFormat", static_cast<int>(m_data_format));
 
-  pConf->Write(_T("EnableNMEA0183"), m_protocols.nmea0183);
-  pConf->Write(_T("EnableNMEA2000"), m_protocols.nmea2000);
-  pConf->Write(_T("EnableSignalK"), m_protocols.signalK);
+  pConf->Write("EnableNMEA0183", m_protocols.nmea0183);
+  pConf->Write("EnableNMEA2000", m_protocols.nmea2000);
+  pConf->Write("EnableSignalK", m_protocols.signalK);
 
   // Replay preferences.
-  pConf->Write(_T("NMEA0183ReplayMode"),
+  pConf->Write("NMEA0183ReplayMode",
                static_cast<int>(m_protocols.nmea0183ReplayMode));
 
   // NMEA 0183 network settings
-  pConf->Write(_T("NMEA0183_UseTCP"), m_protocols.nmea0183Net.useTCP);
-  pConf->Write(_T("NMEA0183_Port"), m_protocols.nmea0183Net.port);
-  pConf->Write(_T("NMEA0183_Enabled"), m_protocols.nmea0183Net.enabled);
+  pConf->Write("NMEA0183_UseTCP", m_protocols.nmea0183Net.useTCP);
+  pConf->Write("NMEA0183_Port", m_protocols.nmea0183Net.port);
+  pConf->Write("NMEA0183_Enabled", m_protocols.nmea0183Net.enabled);
 
   // NMEA 2000 network settings
-  pConf->Write(_T("NMEA2000_UseTCP"), m_protocols.n2kNet.useTCP);
-  pConf->Write(_T("NMEA2000_Port"), m_protocols.n2kNet.port);
-  pConf->Write(_T("NMEA2000_Enabled"), m_protocols.n2kNet.enabled);
+  pConf->Write("NMEA2000_UseTCP", m_protocols.n2kNet.useTCP);
+  pConf->Write("NMEA2000_Port", m_protocols.n2kNet.port);
+  pConf->Write("NMEA2000_Enabled", m_protocols.n2kNet.enabled);
 
 #if 0
   // Signal K network settings
-  pConf->Write(_T("SignalK_UseTCP"), m_protocols.signalKNet.useTCP);
-  pConf->Write(_T("SignalK_Port"), m_protocols.signalKNet.port);
-  pConf->Write(_T("SignalK_Enabled"), m_protocols.signalKNet.enabled);
+  pConf->Write("SignalK_UseTCP", m_protocols.signalKNet.useTCP);
+  pConf->Write("SignalK_Port", m_protocols.signalKNet.port);
+  pConf->Write("SignalK_Enabled", m_protocols.signalKNet.enabled);
 #endif
 
   return true;
@@ -1466,7 +1466,7 @@ bool vdr_pi::ParseNMEAComponents(wxString nmea, wxString& talkerId,
   }
 
   // Split the sentence into fields
-  wxStringTokenizer tok(nmea, wxT(",*"));
+  wxStringTokenizer tok(nmea, ",*");
   if (!tok.HasMoreTokens()) return false;
 
   wxString header = tok.GetNextToken();

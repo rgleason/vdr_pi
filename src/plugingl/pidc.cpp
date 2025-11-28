@@ -85,7 +85,7 @@ piDC::piDC( wxGLCanvas &canvas ) :
     wxFont font = wxFont(20, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, "Roboto");
     SetFont(font);
 #endif
-    m_buseTex = GetLocaleCanonicalName().IsSameAs(_T("en_US"));
+    m_buseTex = GetLocaleCanonicalName().IsSameAs("en_US");
     workBuf = NULL;
     workBufSize = 0;
 
@@ -117,7 +117,7 @@ piDC::piDC( wxDC &pdc ) :
     }
 #endif
     m_textforegroundcolour = wxColour( 0, 0, 0 );
-    m_buseTex = GetLocaleCanonicalName().IsSameAs(_T("en_US"));
+    m_buseTex = GetLocaleCanonicalName().IsSameAs("en_US");
     workBuf = NULL;
     workBufSize = 0;
 #ifdef USE_ANDROID_GLES2
@@ -138,7 +138,7 @@ piDC::piDC() :
     wxFont font = wxFont(20, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, "Roboto");
     SetFont(font);
 #endif
-    m_buseTex = GetLocaleCanonicalName().IsSameAs(_T("en_US"));
+    m_buseTex = GetLocaleCanonicalName().IsSameAs("en_US");
     workBuf = NULL;
     workBufSize = 0;
 #ifdef USE_ANDROID_GLES2
@@ -1511,7 +1511,7 @@ static void piDCerrorCallback( GLenum errorCode )
 {
 //   const GLubyte *estring;
 //   estring = gluErrorString(errorCode);
-   //wxLogMessage( _T("OpenGL Tessellation Error: %s"), (char *)estring );
+   //wxLogMessage( "OpenGL Tessellation Error: %s", (char *)estring );
 }
 
 static void piDCbeginCallback( GLenum type )
