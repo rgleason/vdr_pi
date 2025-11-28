@@ -21,6 +21,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  **************************************************************************/
+#include <cstdint>
 
 #include "vdr_pi_prefs_net.h"
 #include "vdr_pi_prefs.h"
@@ -34,7 +35,8 @@ enum {
   ID_NMEA2000_CHECK,
   ID_SIGNALK_CHECK,
   ID_NMEA0183_NETWORK_RADIO,
-  ID_NMEA0183_INTERNAL_RADIO
+  ID_NMEA0183_INTERNAL_RADIO,
+  ID_NMEA0183_LOOPBACK_RADIO
 };
 
 BEGIN_EVENT_TABLE(VDRPrefsDialog, wxDialog)
@@ -49,6 +51,8 @@ EVT_CHECKBOX(ID_NMEA2000_CHECK, VDRPrefsDialog::OnProtocolCheck)
 EVT_RADIOBUTTON(ID_NMEA0183_NETWORK_RADIO,
                 VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
 EVT_RADIOBUTTON(ID_NMEA0183_INTERNAL_RADIO,
+                VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
+EVT_RADIOBUTTON(ID_NMEA0183_LOOPBACK_RADIO,
                 VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
 END_EVENT_TABLE()
 
@@ -264,23 +268,29 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
   // Add network panels for each protocol
   // NMEA 0183 replay mode selection
   wxStaticBox* nmea0183Box =
-      new wxStaticBox(panel, wxID_ANY, _("NMEA 0183 Replay Method"));
+      new wxStaticBox(panel, wxID_ANY, _("Replay Method"));
   wxStaticBoxSizer* nmea0183Sizer =
       new wxStaticBoxSizer(nmea0183Box, wxVERTICAL);
 
   m_nmea0183InternalRadio = new wxRadioButton(
-      panel, ID_NMEA0183_INTERNAL_RADIO, _("Use internal API"),
+      panel, ID_NMEA0183_INTERNAL_RADIO, _("NMEA 0183 using internal API"),
       wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
   m_nmea0183NetworkRadio = new wxRadioButton(
-      panel, ID_NMEA0183_NETWORK_RADIO, _("Use network connection (UDP/TCP)"));
+      panel, ID_NMEA0183_NETWORK_RADIO, _("NMEA 0183 using network connection (UDP/TCP)"));
+  m_nmea0183LoopbackRadio =
+      new wxRadioButton(panel, ID_NMEA0183_LOOPBACK_RADIO,
+                        _("All messages using loopback driver (experimental)"));
 
   m_nmea0183InternalRadio->SetValue(m_protocols.nmea0183ReplayMode ==
                                     NMEA0183ReplayMode::INTERNAL_API);
   m_nmea0183NetworkRadio->SetValue(m_protocols.nmea0183ReplayMode ==
                                    NMEA0183ReplayMode::NETWORK);
+  m_nmea0183LoopbackRadio->SetValue(m_protocols.nmea0183ReplayMode ==
+                                    NMEA0183ReplayMode::LOOPBACK);
 
   nmea0183Sizer->Add(m_nmea0183InternalRadio, 0, wxALL, 5);
   nmea0183Sizer->Add(m_nmea0183NetworkRadio, 0, wxALL, 5);
+  nmea0183Sizer->Add(m_nmea0183LoopbackRadio, 0, wxALL, 5);
   mainSizer->Add(nmea0183Sizer, 0, wxEXPAND | wxALL, 5);
 
   // Network settings
@@ -292,9 +302,10 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
   // Enable/disable NMEA 0183 network panel based on replay mode
   m_nmea0183NetPanel->Enable(m_protocols.nmea0183ReplayMode ==
                              NMEA0183ReplayMode::NETWORK);
-
   m_nmea2000NetPanel =
       new ConnectionSettingsPanel(panel, _("NMEA 2000"), m_protocols.n2kNet);
+  m_nmea2000NetPanel->Enable(m_protocols.nmea0183ReplayMode !=
+                             NMEA0183ReplayMode::LOOPBACK);
   mainSizer->Add(m_nmea2000NetPanel, 0, wxEXPAND | wxALL, 5);
 
 #if 0  // Signal K support disabled for now
@@ -331,9 +342,12 @@ void VDRPrefsDialog::OnOK(wxCommandEvent& event) {
 #if 0
   m_protocols.signalKNet = m_signalKNetPanel->GetSettings();
 #endif
-  m_protocols.nmea0183ReplayMode = m_nmea0183InternalRadio->GetValue()
-                                       ? NMEA0183ReplayMode::INTERNAL_API
-                                       : NMEA0183ReplayMode::NETWORK;
+  if (m_nmea0183InternalRadio->GetValue())
+    m_protocols.nmea0183ReplayMode = NMEA0183ReplayMode::INTERNAL_API;
+  else if (m_nmea0183LoopbackRadio->GetValue())
+    m_protocols.nmea0183ReplayMode = NMEA0183ReplayMode::LOOPBACK;
+  else
+    m_protocols.nmea0183ReplayMode = NMEA0183ReplayMode::NETWORK;
 
   event.Skip();
 }
@@ -363,4 +377,5 @@ void VDRPrefsDialog::OnUseSpeedThresholdCheck(wxCommandEvent& event) {
 
 void VDRPrefsDialog::OnNMEA0183ReplayModeChanged(wxCommandEvent& event) {
   m_nmea0183NetPanel->Enable(event.GetId() == ID_NMEA0183_NETWORK_RADIO);
+  m_nmea2000NetPanel->Enable(event.GetId() != ID_NMEA0183_LOOPBACK_RADIO);
 }

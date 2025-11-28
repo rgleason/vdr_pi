@@ -90,6 +90,8 @@ public:
    */
   void UpdatePlaybackStatus(const wxString& status);
 
+  void EnableSpeedSlider(bool enable) { m_speedSlider->Enable(enable); }
+
 private:
   /** Create and layout UI controls. */
   void CreateControls();

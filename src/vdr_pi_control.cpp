@@ -16,10 +16,23 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  **************************************************************************/
+#include <cstdint>
 
 #include "vdr_pi_control.h"
 #include "vdr_pi.h"
 #include "icons.h"
+
+const char* const kBadVdrFormat =
+_(R"(This file seems to not be recorded by Data Monitor
+in VDR mode. You might want to change the Replay
+preferences to better match it )");
+
+const char* const kBadNonVdrFormat =
+_(R"(This file seems to be recorded by Data Monitor
+in VDR mode. You might want to adjust the Replay
+preferences to "Use loopback driver" to be able to
+play it.)");
+
 
 enum {
   ID_VDR_LOAD = wxID_HIGHEST + 1,
@@ -246,10 +259,15 @@ void VDRControl::OnLoadButton(wxCommandEvent& event) {
   int response = PlatformFileSelectorDialog(GetOCPNCanvasWindow(), &file,
                                             _("Select Playback File"),
                                             init_directory, _T(""), _T("*.*"));
+  if (response != wxID_OK) return;
 
-  if (response == wxID_OK) {
-    LoadFile(file);
+  bool is_vdrfile = DataMonitorReplayMgr::IsVdrFormat(file.ToStdString());
+  if (m_pvdr->IsUsingLoopback()) {
+    if (!is_vdrfile) OCPNMessageBox_PlugIn(GetOCPNCanvasWindow(), kBadVdrFormat);
+  } else {
+    if (is_vdrfile) OCPNMessageBox_PlugIn(GetOCPNCanvasWindow(), kBadNonVdrFormat);
   }
+  LoadFile(file);
 }
 
 void VDRControl::OnProgressSliderUpdated(wxScrollEvent& event) {
@@ -307,6 +325,7 @@ void VDRControl::UpdateControls() {
                              m_buttonSize, m_buttonSize));
     m_playPauseBtn->SetToolTip(isPlaying ? m_pauseBtnTooltip
                                          : m_playBtnTooltip);
+    if (m_pvdr->IsError()) UpdateFileStatus(_("Error"));
   }
 
   // Enable/disable controls based on state
@@ -322,10 +341,12 @@ void VDRControl::UpdateControls() {
   if (hasFile && m_pvdr->GetCurrentTimestamp().IsValid()) {
     wxString timeStr =
         m_pvdr->GetCurrentTimestamp().ToUTC().Format("%Y-%m-%d %H:%M:%S UTC");
-    m_timeLabel->SetLabel("Date and Time: " + timeStr);
+    m_timeLabel->SetLabel(_("Date and Time: ") + timeStr);
   } else {
-    m_timeLabel->SetLabel(_("Date and Time: --"));
+    m_timeLabel->SetLabel(_("Date and Time: ") + "--");
   }
+
+  if (!isPlaying && isAtEnd) UpdatePlaybackStatus(_("Stopped"));
   Layout();
 }
 
@@ -341,7 +362,7 @@ void VDRControl::UpdateFileLabel(const wxString& filename) {
 
 void VDRControl::StartPlayback() {
   m_pvdr->StartPlayback();
-  UpdatePlaybackStatus(_("Playing"));
+  if (m_pvdr->IsPlaying()) UpdatePlaybackStatus(_("Playing"));
 }
 
 void VDRControl::PausePlayback() {

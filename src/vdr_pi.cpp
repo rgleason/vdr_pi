@@ -23,6 +23,7 @@
 #include "wx/wx.h"
 #endif  // precompiled headers
 
+#include "wx/app.h"
 #include "wx/tokenzr.h"
 #include "wx/statline.h"
 #include "wx/display.h"
@@ -32,6 +33,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cstdint>
+#include <memory>
 
 #include "ocpn_plugin.h"
 
@@ -39,6 +41,7 @@
 #include "vdr_pi_control.h"
 #include "vdr_pi.h"
 #include "icons.h"
+#include "dm_replay_mgr.h"
 
 // the class factories, used to create and destroy instances of the PlugIn
 
@@ -57,7 +60,9 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) { delete p; }
 wxDEFINE_EVENT(EVT_N2K, ObservedEvt);
 wxDEFINE_EVENT(EVT_SIGNALK, ObservedEvt);
 
-vdr_pi::vdr_pi(void* ppimgr) : opencpn_plugin_118(ppimgr) {
+vdr_pi::vdr_pi(void* ppimgr)
+    : opencpn_plugin_118(ppimgr),
+      m_dm_replay_mgr(std::make_unique<DataMonitorReplayMgr>()) {
   // Create the PlugIn icons
   initialize_images();
 
@@ -635,6 +640,12 @@ double vdr_pi::GetSpeedMultiplier() const {
 }
 
 void vdr_pi::Notify() {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+    if (m_pvdrcontrol) m_pvdrcontrol->SetProgress(GetProgressFraction());
+    int delay = m_dm_replay_mgr->Notify();
+    if (delay >= 0) m_timer->Start(delay, wxTIMER_ONE_SHOT);
+    return;
+  }
   if (!m_istream.IsOpened()) return;
 
   wxDateTime now = wxDateTime::UNow();
@@ -692,6 +703,7 @@ void vdr_pi::Notify() {
       msgHasTimestamp =
           m_timestampParser.ParseTimestamp(line, timestamp, precision);
     }
+
     if (!nmea.IsEmpty()) {
       if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::INTERNAL_API) {
         // Add sentence to buffer, maintaining max size.
@@ -746,6 +758,20 @@ void vdr_pi::Notify() {
   // Update progress regardless of file type.
   if (m_pvdrcontrol) {
     m_pvdrcontrol->SetProgress(GetProgressFraction());
+  }
+}
+
+void vdr_pi::OnVdrMsg(VdrMsgType type, const std::string msg) {
+  switch (type) {
+    case VdrMsgType::kDebug:
+      wxLogDebug(wxString(msg));
+      break;
+    case VdrMsgType::kMessage:
+      wxLogMessage(wxString(msg));
+      break;
+    case VdrMsgType::kInfo:
+      OCPNMessageBox_PlugIn(wxTheApp->GetTopWindow(), msg);
+      break;
   }
 }
 
@@ -816,6 +842,9 @@ void vdr_pi::OnToolbarToolCallback(int id) {
                                .Show(true);
       m_pauimgr->AddPane(m_pvdrcontrol, pane);
       m_pauimgr->Update();
+      if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+        m_pvdrcontrol->EnableSpeedSlider(false);
+      }
     } else {
       m_pauimgr->GetPane(m_pvdrcontrol)
           .Show(!m_pauimgr->GetPane(m_pvdrcontrol).IsShown());
@@ -845,6 +874,34 @@ void vdr_pi::OnToolbarToolCallback(int id) {
       }
     }
   }
+}
+
+bool vdr_pi::IsPlaying() const {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return m_dm_replay_mgr->IsPlaying();
+  return m_playing;
+}
+
+bool vdr_pi::IsError() const {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return m_dm_replay_mgr->IsError();
+  return false;
+}
+
+bool vdr_pi::IsAtFileEnd() const {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return m_dm_replay_mgr->IsAtEnd();
+  return m_atFileEnd;
+}
+
+wxDateTime vdr_pi::GetCurrentTimestamp() const {
+  if (m_protocols.nmea0183ReplayMode != NMEA0183ReplayMode::LOOPBACK)
+    return m_currentTimestamp;
+
+  uint64_t stamp = m_dm_replay_mgr->GetCurrentTimestamp();
+  wxDateTime date_time(time_t(stamp / 1000));
+  date_time.SetMillisecond(stamp % 1000);
+  return date_time;
 }
 
 void vdr_pi::SetColorScheme(PI_ColorScheme cs) {
@@ -1004,8 +1061,7 @@ void vdr_pi::StartRecording() {
   // Ensure directory exists
   if (!wxDirExists(m_recording_dir)) {
     if (!wxMkdir(m_recording_dir)) {
-      wxLogError("Failed to create recording directory: %s",
-                 m_recording_dir);
+      wxLogError("Failed to create recording directory: %s", m_recording_dir);
       return;
     }
   }
@@ -1083,6 +1139,15 @@ void vdr_pi::StartPlayback() {
     }
     return;
   }
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+    if (!m_dm_replay_mgr->IsPaused())
+      m_dm_replay_mgr = std::move(DmReplayMgrFactory());
+    m_dm_replay_mgr->Start();
+    if (m_dm_replay_mgr->IsPlaying())
+      m_pvdrcontrol->UpdateFileStatus(_("File successfully loaded"));
+    Notify();
+    return;
+  }
 
   // Reset end-of-file state when starting playback
   m_atFileEnd = false;
@@ -1123,6 +1188,12 @@ void vdr_pi::StartPlayback() {
 }
 
 void vdr_pi::PausePlayback() {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+    m_dm_replay_mgr->Pause();
+    if (m_pvdrcontrol) m_pvdrcontrol->UpdateControls();
+    return;
+  }
+
   if (!m_playing) return;
 
   m_timer->Stop();
@@ -1509,6 +1580,8 @@ void vdr_pi::SelectPrimaryTimeSource() {
 }
 
 bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return true;
   if (!m_istream.IsOpened()) {
     error = _("File not open");
     hasValidTimestamps = false;
@@ -1811,6 +1884,9 @@ bool vdr_pi::HasValidTimestamps() const {
 }
 
 double vdr_pi::GetProgressFraction() const {
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+    return m_dm_replay_mgr->GetProgressFraction();
+
   // For files with timestamps
   if (HasValidTimestamps()) {
     wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;
@@ -1855,13 +1931,26 @@ wxString vdr_pi::GetInputFile() const {
   return wxEmptyString;
 }
 
+std::unique_ptr<DataMonitorReplayMgr> vdr_pi::DmReplayMgrFactory() {
+  auto update_controls = [&] { m_pvdrcontrol->UpdateControls(); };
+  auto user_message = [&](VdrMsgType t, const std::string& s) {
+    OnVdrMsg(t, s);
+  };
+  return std::make_unique<DataMonitorReplayMgr>(m_ifilename.ToStdString(),
+                                                update_controls, user_message);
+}
+
 bool vdr_pi::LoadFile(const wxString& filename, wxString* error) {
   if (IsPlaying()) {
     StopPlayback();
   }
 
-  // Reset all file-related state
   m_ifilename = filename;
+  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+    m_dm_replay_mgr = std::move(DmReplayMgrFactory());
+  }
+
+  // Reset all file-related state
   m_is_csv_file = false;
   m_timestamp_idx = static_cast<unsigned int>(-1);
   m_message_idx = static_cast<unsigned int>(-1);

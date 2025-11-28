@@ -31,6 +31,7 @@
 
 #include <deque>
 #include <map>
+#include <memory>
 
 #include "wx/wxprec.h"
 
@@ -48,6 +49,7 @@
 #include "vdr_pi_time.h"
 #include "vdr_network.h"
 #include "config.h"
+#include "dm_replay_mgr.h"
 
 #define VDR_TOOL_POSITION -1  // Request default positioning of toolbar tool
 
@@ -70,8 +72,9 @@ enum class VDRDataFormat {
 };
 
 enum class NMEA0183ReplayMode {
-  NETWORK,      // Use network connection
-  INTERNAL_API  // Use PushNMEABuffer()
+  NETWORK,       // Use network connection
+  INTERNAL_API,  // Use PushNMEABuffer()
+  LOOPBACK       // Use WriteCommDriver() on loopback driver
 };
 
 /**
@@ -99,10 +102,14 @@ struct VDRProtocolSettings {
   ConnectionSettings n2kNet;       //!< NMEA 2000 connection settings
   ConnectionSettings signalKNet;   //!< Signal K connection settings
 
-  NMEA0183ReplayMode nmea0183ReplayMode =
-      NMEA0183ReplayMode::INTERNAL_API;  //!< NMEA 0183 replay method
+  NMEA0183ReplayMode nmea0183ReplayMode;
 
-  VDRProtocolSettings() : nmea0183(true), nmea2000(false), signalK(false) {}
+  VDRProtocolSettings()
+      : nmea0183(true),
+        nmea2000(false),
+        signalK(false) /**,
+nmea0183ReplayMode(NMEA0183ReplayMode::INTERNAL_API) */
+  {}
 };
 
 /**
@@ -209,9 +216,13 @@ public:
   /** Return whether recording is currently paused. */
   bool IsRecordingPaused() { return m_recording_paused; }
   /** Return whether playback is currently active. */
-  bool IsPlaying() { return m_playing; }
+  bool IsPlaying() const;
   /** Return whether the end of the playback file has been reached. */
-  bool IsAtFileEnd() const { return m_atFileEnd; }
+  bool IsAtFileEnd() const;
+
+  /** Return true if blocking error encountered. */
+  bool IsError() const;
+
   void ResetEndOfFile() { m_atFileEnd = false; }
   /**
    * Calculate when the current NMEA/SignalK message should be played during
@@ -324,7 +335,7 @@ public:
   /** Get timestamp of last message in file. */
   wxDateTime GetLastTimestamp() const { return m_lastTimestamp; }
   /** Get timestamp at current playback position. */
-  wxDateTime GetCurrentTimestamp() const { return m_currentTimestamp; }
+  wxDateTime GetCurrentTimestamp() const;
   /**
    * Set timestamp for current playback position.
    * @param timestamp New current timestamp
@@ -452,6 +463,10 @@ public:
    */
   bool PlaybackMessage(const wxString& protocol, const wxString& message);
 
+  bool IsUsingLoopback() const {
+     return m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK;
+  }
+
 private:
   class TimerHandler : public wxTimer {
   public:
@@ -572,8 +587,15 @@ private:
    */
   void HandleNetworkPlayback(const wxString& data);
 
+  /** Handle message callback from dm_replay_mgr et al.. */
+  void OnVdrMsg(VdrMsgType type, const std::string msg);
+
+  std::unique_ptr<DataMonitorReplayMgr> DmReplayMgrFactory();
+
   int m_tb_item_id_record;
   int m_tb_item_id_play;
+
+  std::unique_ptr<DataMonitorReplayMgr> m_dm_replay_mgr;
 
   /** Configuration object for saving/loading settings. */
   wxFileConfig* m_pconfig;
