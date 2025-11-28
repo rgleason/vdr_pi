@@ -18,7 +18,7 @@
 /**
  * \file
  *
- * Data Monitor log files replaying state.
+ * Data Monitor log files replay state.
  */
 
 #ifndef Data_MonitoR_RePlaY_MgR_h

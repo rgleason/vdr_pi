@@ -1,13 +1,5 @@
-/******************************************************************************
- * $Id: vdr_pi.h, v0.2 2011/05/23 SethDart Exp $
- *
- * Project:  OpenCPN
- * Purpose:  VDR Plugin
- * Author:   Jean-Eudes Onfray
- *
- ***************************************************************************
- *   Copyright (C) 2011 by Jean-Eudes Onfray   *
- *   $EMAIL$   *
+/**************************************************************************
+ *   Copyright (C) 2011 by Jean-Eudes Onfray                               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,11 +12,8 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
- ***************************************************************************
- */
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
+ **************************************************************************/
 
 #ifndef VDRPI_H_
 #define VDRPI_H_

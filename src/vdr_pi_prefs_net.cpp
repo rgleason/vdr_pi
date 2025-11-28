@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2024 by OpenCPN development team                        *
+ *   Copyright (C) 2025 Sebastian Rosset                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -12,9 +12,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 #include <cstdint>
 
@@ -39,8 +37,8 @@ ConnectionSettingsPanel::ConnectionSettingsPanel(
 
   // Protocol selection
   auto* protocol_sizer = new wxBoxSizer(wxHORIZONTAL);
-  protocol_sizer->Add(new wxStaticText(this, wxID_ANY, _("Protocol:")), 0,
-                      wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+  rotocol_sizer->Add(new wxStaticText(this, wxID_ANY, _("Protocol:")), 0,
+                     wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
 
   m_tcp_radio = new wxRadioButton(this, wxID_ANY, _("TCP"), wxDefaultPosition,
                                   wxDefaultSize, wxRB_GROUP);
