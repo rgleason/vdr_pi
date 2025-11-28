@@ -9,6 +9,7 @@
 
 #include <wx/filename.h>
 #include <wx/mstream.h>
+
 #include "ocpn_plugin.h"
 #include "icons.h"
 

@@ -37,8 +37,8 @@ ConnectionSettingsPanel::ConnectionSettingsPanel(
 
   // Protocol selection
   auto* protocol_sizer = new wxBoxSizer(wxHORIZONTAL);
-  rotocol_sizer->Add(new wxStaticText(this, wxID_ANY, _("Protocol:")), 0,
-                     wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+  protocol_sizer->Add(new wxStaticText(this, wxID_ANY, _("Protocol:")), 0,
+                      wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
 
   m_tcp_radio = new wxRadioButton(this, wxID_ANY, _("TCP"), wxDefaultPosition,
                                   wxDefaultSize, wxRB_GROUP);
