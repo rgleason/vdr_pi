@@ -275,8 +275,9 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
   m_nmea0183InternalRadio = new wxRadioButton(
       panel, ID_NMEA0183_INTERNAL_RADIO, _("NMEA 0183 using internal API"),
       wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-  m_nmea0183NetworkRadio = new wxRadioButton(
-      panel, ID_NMEA0183_NETWORK_RADIO, _("NMEA 0183 using network connection (UDP/TCP)"));
+  m_nmea0183NetworkRadio =
+      new wxRadioButton(panel, ID_NMEA0183_NETWORK_RADIO,
+                        _("NMEA 0183 using network connection (UDP/TCP)"));
   m_nmea0183LoopbackRadio =
       new wxRadioButton(panel, ID_NMEA0183_LOOPBACK_RADIO,
                         _("All messages using loopback driver (experimental)"));

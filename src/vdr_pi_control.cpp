@@ -23,16 +23,15 @@
 #include "icons.h"
 
 const char* const kBadVdrFormat =
-_(R"(This file seems to not be recorded by Data Monitor
+    _(R"(This file seems to not be recorded by Data Monitor
 in VDR mode. You might want to change the Replay
 preferences to better match it )");
 
 const char* const kBadNonVdrFormat =
-_(R"(This file seems to be recorded by Data Monitor
+    _(R"(This file seems to be recorded by Data Monitor
 in VDR mode. You might want to adjust the Replay
 preferences to "Use loopback driver" to be able to
 play it.)");
-
 
 enum {
   ID_VDR_LOAD = wxID_HIGHEST + 1,
@@ -263,9 +262,11 @@ void VDRControl::OnLoadButton(wxCommandEvent& event) {
 
   bool is_vdrfile = DataMonitorReplayMgr::IsVdrFormat(file.ToStdString());
   if (m_pvdr->IsUsingLoopback()) {
-    if (!is_vdrfile) OCPNMessageBox_PlugIn(GetOCPNCanvasWindow(), kBadVdrFormat);
+    if (!is_vdrfile)
+      OCPNMessageBox_PlugIn(GetOCPNCanvasWindow(), kBadVdrFormat);
   } else {
-    if (is_vdrfile) OCPNMessageBox_PlugIn(GetOCPNCanvasWindow(), kBadNonVdrFormat);
+    if (is_vdrfile)
+      OCPNMessageBox_PlugIn(GetOCPNCanvasWindow(), kBadNonVdrFormat);
   }
   LoadFile(file);
 }

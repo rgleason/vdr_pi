@@ -33,7 +33,7 @@
 
 using namespace std::chrono_literals;
 
-static constexpr auto kEpoch = ReplayTimepoint{};   ///< 1/1 1970
+static constexpr auto kEpoch = ReplayTimepoint{};  ///< 1/1 1970
 
 static constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
 
@@ -69,7 +69,6 @@ static ReplayTimepoint ParseTimeStamp(const std::string& stamp) {
   is >> std::get_time(&tm, format);
   return ReplayClock::from_time_t(std::mktime(&tm));
 }
-
 
 /**
  * fast_csv_reader byte source reading from file filtering blank and comment
@@ -163,8 +162,7 @@ void DataMonitorReplayMgr::HandleRow(const std::string& protocol,
 
   const auto s = ss.str();
   if (s.empty()) return;
-  auto payload =
-      std::make_shared<std::vector<uint8_t>>(s.begin(), s.end());
+  auto payload = std::make_shared<std::vector<uint8_t>>(s.begin(), s.end());
   WriteCommDriver(m_loopback_drivers[0], payload);
 }
 
