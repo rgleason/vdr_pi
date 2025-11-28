@@ -21,11 +21,10 @@
 
 #ifndef WX_PRECOMP
 #include "wx/wx.h"
-#endif  // precompiled headers
+#endif
 
 #include "wx/app.h"
 #include "wx/tokenzr.h"
-#include "wx/statline.h"
 #include "wx/display.h"
 
 #include <map>
@@ -46,7 +45,7 @@
 // the class factories, used to create and destroy instances of the PlugIn
 
 extern "C" DECL_EXP opencpn_plugin* create_pi(void* ppimgr) {
-  return new vdr_pi(ppimgr);
+  return new VdrPi(ppimgr);
 }
 
 extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) { delete p; }
@@ -60,11 +59,11 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) { delete p; }
 wxDEFINE_EVENT(EVT_N2K, ObservedEvt);
 wxDEFINE_EVENT(EVT_SIGNALK, ObservedEvt);
 
-vdr_pi::vdr_pi(void* ppimgr)
+VdrPi::VdrPi(void* ppimgr)
     : opencpn_plugin_118(ppimgr),
       m_dm_replay_mgr(std::make_unique<DataMonitorReplayMgr>()) {
   // Create the PlugIn icons
-  initialize_images();
+  InitializeImages();
 
   wxFileName fn;
 
@@ -100,9 +99,9 @@ vdr_pi::vdr_pi(void* ppimgr)
   m_messages_dropped = false;
 }
 
-int vdr_pi::Init(void) {
-  m_eventHandler = new wxEvtHandler();
-  m_timer = new TimerHandler(this);
+int VdrPi::Init() {
+  m_event_handler = new wxEvtHandler();
+  m_timer = new VdrTimer(this);
 
   AddLocaleCatalog("opencpn-vdr_pi");
 
@@ -116,7 +115,7 @@ int vdr_pi::Init(void) {
   // Set up NMEA 2000 listeners based on preferences
   UpdateNMEA2000Listeners();
 
-  // If auto-start is enabled and we're not playing back and not using speed
+  // If auto-start is enabled, and we're not playing back and not using speed
   // threshold, start recording after initialization.
   m_recording_manually_disabled = false;
   if (m_auto_start_recording && !m_use_speed_threshold && !IsPlaying()) {
@@ -126,18 +125,18 @@ int vdr_pi::Init(void) {
   }
 
   m_tb_item_id_record = InsertPlugInToolSVG(
-      "VDR", _svg_vdr_record, _svg_record_toggled, _svg_record_toggled,
-      wxITEM_CHECK, _("VDR Record"), "", NULL, VDR_TOOL_POSITION, 0, this);
+      "VDR", g_svg_vdr_record, g_svg_record_toggled, g_svg_record_toggled,
+      wxITEM_CHECK, _("VDR Record"), "", nullptr, kVdrToolPosition, 0, this);
   m_tb_item_id_play = InsertPlugInToolSVG(
-      "VDR", _svg_vdr_play, _svg_play_toggled, _svg_play_toggled, wxITEM_CHECK,
-      _("VDR Play"), "", NULL, VDR_TOOL_POSITION, 0, this);
+      "VDR", g_svg_vdr_play, g_svg_play_toggled, g_svg_play_toggled,
+      wxITEM_CHECK, _("VDR Play"), "", nullptr, kVdrToolPosition, 0, this);
   m_recording = false;
 
   return (WANTS_TOOLBAR_CALLBACK | INSTALLS_TOOLBAR_TOOL | WANTS_CONFIG |
           WANTS_NMEA_SENTENCES | WANTS_AIS_SENTENCES | WANTS_PREFERENCES);
 }
 
-bool vdr_pi::DeInit(void) {
+bool VdrPi::DeInit() {
   SaveConfig();
   if (m_timer) {
     if (m_timer->IsRunning()) {
@@ -167,58 +166,58 @@ bool vdr_pi::DeInit(void) {
 
   // Stop and cleanup all network servers.
   StopNetworkServers();
-  m_networkServers.clear();
+  m_network_servers.clear();
 
   RemovePlugInTool(m_tb_item_id_record);
   RemovePlugInTool(m_tb_item_id_play);
 
-  if (m_eventHandler) {
-    m_eventHandler->Unbind(EVT_N2K, &vdr_pi::OnN2KEvent, this);
-    m_eventHandler->Unbind(EVT_SIGNALK, &vdr_pi::OnSignalKEvent, this);
-    delete m_eventHandler;
-    m_eventHandler = nullptr;
+  if (m_event_handler) {
+    m_event_handler->Unbind(EVT_N2K, &VdrPi::OnN2KEvent, this);
+    m_event_handler->Unbind(EVT_SIGNALK, &VdrPi::OnSignalKEvent, this);
+    delete m_event_handler;
+    m_event_handler = nullptr;
   }
   m_n2k_listeners.clear();
   m_signalk_listeners.clear();
   return true;
 }
 
-int vdr_pi::GetAPIVersionMajor() { return atoi(API_VERSION); }
+int VdrPi::GetAPIVersionMajor() { return atoi(API_VERSION); }
 
-int vdr_pi::GetAPIVersionMinor() {
+int VdrPi::GetAPIVersionMinor() {
   std::string v(API_VERSION);
   size_t dotpos = v.find('.');
   return atoi(v.substr(dotpos + 1).c_str());
 }
 
-int vdr_pi::GetPlugInVersionMajor() { return PLUGIN_VERSION_MAJOR; }
+int VdrPi::GetPlugInVersionMajor() { return PLUGIN_VERSION_MAJOR; }
 
-int vdr_pi::GetPlugInVersionMinor() { return PLUGIN_VERSION_MINOR; }
+int VdrPi::GetPlugInVersionMinor() { return PLUGIN_VERSION_MINOR; }
 
-int vdr_pi::GetPlugInVersionPatch() { return PLUGIN_VERSION_PATCH; }
+int VdrPi::GetPlugInVersionPatch() { return PLUGIN_VERSION_PATCH; }
 
-int vdr_pi::GetPlugInVersionPost() { return PLUGIN_VERSION_TWEAK; }
+int VdrPi::GetPlugInVersionPost() { return PLUGIN_VERSION_TWEAK; }
 
-const char* vdr_pi::GetPlugInVersionPre() { return PKG_PRERELEASE; }
+const char* VdrPi::GetPlugInVersionPre() { return PKG_PRERELEASE; }
 
-const char* vdr_pi::GetPlugInVersionBuild() { return PKG_BUILD_INFO; }
+const char* VdrPi::GetPlugInVersionBuild() { return PKG_BUILD_INFO; }
 
-wxBitmap* vdr_pi::GetPlugInBitmap() { return &m_panelBitmap; }
+wxBitmap* VdrPi::GetPlugInBitmap() { return &m_panelBitmap; }
 
-wxString vdr_pi::GetCommonName() { return _("VDR"); }
+wxString VdrPi::GetCommonName() { return _("VDR"); }
 
-wxString vdr_pi::GetShortDescription() {
+wxString VdrPi::GetShortDescription() {
   return _("Voyage Data Recorder plugin for OpenCPN");
 }
 
-wxString vdr_pi::GetLongDescription() {
+wxString VdrPi::GetLongDescription() {
   return _(
       "Voyage Data Recorder plugin for OpenCPN\n\
 Provides NMEA stream save and replay.");
 }
 
-void vdr_pi::UpdateSignalKListeners() {
-  m_eventHandler->Unbind(EVT_SIGNALK, &vdr_pi::OnSignalKEvent, this);
+void VdrPi::UpdateSignalKListeners() {
+  m_event_handler->Unbind(EVT_SIGNALK, &VdrPi::OnSignalKEvent, this);
   m_signalk_listeners.clear();
   wxLogMessage("Configuring SignalK listeners. SignalK enabled: %d",
                m_protocols.signalK);
@@ -227,8 +226,8 @@ void vdr_pi::UpdateSignalKListeners() {
   }
 }
 
-void vdr_pi::UpdateNMEA2000Listeners() {
-  m_eventHandler->Unbind(EVT_N2K, &vdr_pi::OnN2KEvent, this);
+void VdrPi::UpdateNMEA2000Listeners() {
+  m_event_handler->Unbind(EVT_N2K, &VdrPi::OnN2KEvent, this);
   m_n2k_listeners.clear();
   wxLogMessage("Configuring NMEA 2000 listeners. NMEA 2000 enabled: %d",
                m_protocols.nmea2000);
@@ -295,10 +294,10 @@ void vdr_pi::UpdateNMEA2000Listeners() {
 
     for (const auto& it : parameterGroupNumbers) {
       m_n2k_listeners.push_back(
-          GetListener(NMEA2000Id(it.first), EVT_N2K, m_eventHandler));
+          GetListener(NMEA2000Id(it.first), EVT_N2K, m_event_handler));
     }
 
-    m_eventHandler->Bind(EVT_N2K, &vdr_pi::OnN2KEvent, this);
+    m_event_handler->Bind(EVT_N2K, &VdrPi::OnN2KEvent, this);
   }
 }
 
@@ -309,7 +308,7 @@ wxString FormatIsoDateTime(const wxDateTime& ts) {
   return ts.Format("%Y-%m-%dT%H:%M:%S.%lZ");
 }
 
-void vdr_pi::OnSignalKEvent(wxCommandEvent& event) {
+void VdrPi::OnSignalKEvent(wxCommandEvent& event) {
   if (!m_protocols.signalK) {
     // SignalK recording is disabled.
     return;
@@ -359,13 +358,13 @@ inline uint16_t N2KToInt16(const uint8_t* data) {
   return data[0] | (data[1] << 8);  // little-endian uint16
 }
 
-void vdr_pi::OnN2KEvent(wxCommandEvent& event) {
+void VdrPi::OnN2KEvent(wxCommandEvent& event) {
   if (!m_protocols.nmea2000) {
     // NMEA 2000 recording is disabled.
     return;
   }
 
-  ObservedEvt& ev = dynamic_cast<ObservedEvt&>(event);
+  auto& ev = dynamic_cast<ObservedEvt&>(event);
   // Get payload and source
   std::vector<uint8_t> payload = GetN2000Payload(0, ev);  // ID does not matter.
   // Extract PGN from payload (bytes 3-5, little endian)
@@ -409,7 +408,7 @@ void vdr_pi::OnN2KEvent(wxCommandEvent& event) {
   // Format N2K message for recording.
   wxString formatted_message;
   switch (m_data_format) {
-    case VDRDataFormat::CSV: {
+    case VdrDataFormat::kCsv: {
       // CSV format: timestamp,type,id,payload
       // where "id" is the PGN number.
       wxString timestamp = FormatIsoDateTime(wxDateTime::UNow());
@@ -417,7 +416,7 @@ void vdr_pi::OnN2KEvent(wxCommandEvent& event) {
           wxString::Format("%s,NMEA2000,%d,%s\n", timestamp, pgn, log_payload);
       break;
     }
-    case VDRDataFormat::RawNMEA:
+    case VdrDataFormat::kRawNmea:
       // PCDIN format: $PCDIN,<pgn>,<payload>
       formatted_message =
           wxString::Format("$PCDIN,%d,%s\r\n", pgn, log_payload);
@@ -430,7 +429,7 @@ void vdr_pi::OnN2KEvent(wxCommandEvent& event) {
   m_ostream.Write(formatted_message.ToStdString());
 }
 
-wxString vdr_pi::FormatNMEA0183AsCSV(const wxString& nmea) {
+wxString VdrPi::FormatNmea0183AsCsv(const wxString& nmea) {
   // Get current time with millisecond precision
   wxString timestamp = FormatIsoDateTime(wxDateTime::UNow());
 
@@ -448,7 +447,7 @@ wxString vdr_pi::FormatNMEA0183AsCSV(const wxString& nmea) {
   return wxString::Format("%s,%s,,%s\n", timestamp, type, escaped);
 }
 
-void vdr_pi::SetNMEASentence(wxString& sentence) {
+void VdrPi::SetNMEASentence(wxString& sentence) {
   if (!m_protocols.nmea0183) {
     // Recording of NMEA 0183 is disabled.
     return;
@@ -487,10 +486,10 @@ void vdr_pi::SetNMEASentence(wxString& sentence) {
   normalizedSentence.Trim(true);
 
   switch (m_data_format) {
-    case VDRDataFormat::CSV:
-      m_ostream.Write(FormatNMEA0183AsCSV(normalizedSentence));
+    case VdrDataFormat::kCsv:
+      m_ostream.Write(FormatNmea0183AsCsv(normalizedSentence));
       break;
-    case VDRDataFormat::RawNMEA:
+    case VdrDataFormat::kRawNmea:
     default:
       if (!normalizedSentence.EndsWith("\r\n")) {
         normalizedSentence += "\r\n";
@@ -500,24 +499,24 @@ void vdr_pi::SetNMEASentence(wxString& sentence) {
   }
 }
 
-void vdr_pi::SetAISSentence(wxString& sentence) {
+void VdrPi::SetAISSentence(wxString& sentence) {
   SetNMEASentence(sentence);  // Handle the same way as NMEA
 }
 
-const ConnectionSettings& vdr_pi::GetNetworkSettings(
+const ConnectionSettings& VdrPi::GetNetworkSettings(
     const wxString& protocol) const {
   if (protocol == "N2K")
     return m_protocols.n2kNet;
   else if (protocol == "NMEA0183")
     return m_protocols.nmea0183Net;
   else if (protocol == "SignalK")
-    return m_protocols.signalKNet;
+    return m_protocols.signalkNet;
 
   // Default to NMEA0183 if unknown protocol
   return m_protocols.nmea0183Net;
 }
 
-void vdr_pi::CheckAutoRecording(double speed) {
+void VdrPi::CheckAutoRecording(double speed) {
   if (!m_auto_start_recording) {
     // If auto-recording is disabled in settings, do nothing.
     return;
@@ -561,9 +560,9 @@ void vdr_pi::CheckAutoRecording(double speed) {
     }
   } else if (m_recording) {
     // Add hysteresis to prevent rapid starting/stopping
-    static const double HYSTERESIS = 0.2;  // 0.2 knots below threshold
-    if (speed < (m_speed_threshold - HYSTERESIS)) {
-      // If we're recording and it was auto-started, handle stop delay
+    static constexpr double kHysteresis = 0.2;  // 0.2 knots below threshold
+    if (speed < (m_speed_threshold - kHysteresis)) {
+      // If we're recording, and it was auto-started, handle stop delay
       if (!m_below_threshold_since.IsValid()) {
         m_below_threshold_since = wxDateTime::Now().ToUTC();
         wxLogMessage(
@@ -584,20 +583,20 @@ void vdr_pi::CheckAutoRecording(double speed) {
   }
 }
 
-bool vdr_pi::IsNMEA0183OrAIS(const wxString& line) {
+bool VdrPi::IsNmea0183OrAis(const wxString& line) {
   // NMEA sentences start with $ or !
   return line.StartsWith("$") || line.StartsWith("!");
 }
 
-bool vdr_pi::ParseCSVHeader(const wxString& header) {
+bool VdrPi::ParseCSVHeader(const wxString& header) {
   // Reset indices
-  const unsigned int INVALID_INDEX = std::numeric_limits<unsigned int>::max();
-  m_timestamp_idx = INVALID_INDEX;
-  m_message_idx = INVALID_INDEX;
+  constexpr unsigned kInvalidIndex = std::numeric_limits<unsigned int>::max();
+  m_timestamp_idx = kInvalidIndex;
+  m_message_idx = kInvalidIndex;
   m_header_fields.Clear();
 
   // If it looks like NMEA/AIS, it's not a header
-  if (IsNMEA0183OrAIS(header)) {
+  if (IsNmea0183OrAis(header)) {
     return false;
   }
 
@@ -617,29 +616,29 @@ bool vdr_pi::ParseCSVHeader(const wxString& header) {
     }
     idx++;
   }
-  return (m_timestamp_idx != INVALID_INDEX && m_message_idx != INVALID_INDEX);
+  return (m_timestamp_idx != kInvalidIndex && m_message_idx != kInvalidIndex);
 }
 
-bool vdr_pi::ParseCSVLineTimestamp(const wxString& line, wxString* message,
-                                   wxDateTime* timestamp) {
+bool VdrPi::ParseCSVLineTimestamp(const wxString& line, wxString* message,
+                                  wxDateTime* timestamp) {
   assert(m_is_csv_file);
-  return m_timestampParser.ParseCSVLineTimestamp(
+  return m_timestamp_parser.ParseCsvLineTimestamp(
       line, m_timestamp_idx, m_message_idx, message, timestamp);
 }
 
-void vdr_pi::FlushSentenceBuffer() {
+void VdrPi::FlushSentenceBuffer() {
   for (const auto& sentence : m_sentence_buffer) {
     PushNMEABuffer(sentence + "\r\n");
   }
   m_sentence_buffer.clear();
 }
 
-double vdr_pi::GetSpeedMultiplier() const {
+double VdrPi::GetSpeedMultiplier() const {
   return m_pvdrcontrol ? m_pvdrcontrol->GetSpeedMultiplier() : 1.0;
 }
 
-void vdr_pi::Notify() {
-  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+void VdrPi::Notify() {
+  if (m_protocols.replay_mode == ReplayMode::kLoopback) {
     if (m_pvdrcontrol) m_pvdrcontrol->SetProgress(GetProgressFraction());
     int delay = m_dm_replay_mgr->Notify();
     if (delay >= 0) m_timer->Start(delay, wxTIMER_ONE_SHOT);
@@ -648,16 +647,16 @@ void vdr_pi::Notify() {
   if (!m_istream.IsOpened()) return;
 
   wxDateTime now = wxDateTime::UNow();
-  wxDateTime targetTime;
-  bool behindSchedule = true;
+  wxDateTime target_time;
+  bool behind_schedule = true;
   int precision;
 
   // For non-timestamped files, base rate of 10 messages/second
-  const int BASE_MESSAGES_PER_BATCH = 10;
-  const int BASE_INTERVAL_MS = 1000;  // 1 second
+  constexpr int kBaseMessagesPerBatch = 10;
+  constexpr int kBaseIntervalMs = 1000;  // 1 second
 
   // Keep processing messages until we catch up with scheduled time.
-  while (behindSchedule && !m_istream.Eof()) {
+  while (behind_schedule && !m_istream.Eof()) {
     wxString line;
     int pos = m_istream.GetCurrentLine();
 
@@ -678,7 +677,7 @@ void vdr_pi::Notify() {
     }
 
     if (m_istream.Eof() && line.IsEmpty()) {
-      m_atFileEnd = true;
+      m_at_file_end = true;
       PausePlayback();
       if (m_pvdrcontrol) {
         m_pvdrcontrol->UpdateControls();
@@ -700,11 +699,11 @@ void vdr_pi::Notify() {
     } else {
       nmea = line + "\r\n";
       msgHasTimestamp =
-          m_timestampParser.ParseTimestamp(line, timestamp, precision);
+          m_timestamp_parser.ParseTimestamp(line, timestamp, precision);
     }
 
     if (!nmea.IsEmpty()) {
-      if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::INTERNAL_API) {
+      if (m_protocols.replay_mode == ReplayMode::kInternalApi) {
         // Add sentence to buffer, maintaining max size.
         m_sentence_buffer.push_back(nmea);
       }
@@ -714,35 +713,34 @@ void vdr_pi::Notify() {
 
       if (msgHasTimestamp) {
         // The current sentence has a timestamp from the primary time source.
-        m_currentTimestamp = timestamp;
-        targetTime = GetNextPlaybackTime();
+        m_current_timestamp = timestamp;
+        target_time = GetNextPlaybackTime();
         // Check if we've caught up to schedule.
-        if (targetTime.IsValid() && targetTime > now) {
-          behindSchedule = false;  // This will break the loop.
+        if (target_time.IsValid() && target_time > now) {
+          behind_schedule = false;  // This will break the loop.
           // Before scheduling next update, flush our sentence buffer.
           FlushSentenceBuffer();
           // Schedule next notification.
-          wxTimeSpan waitTime = targetTime - now;
+          wxTimeSpan waitTime = target_time - now;
           m_timer->Start(
               static_cast<int>(waitTime.GetMilliseconds().ToDouble()),
               wxTIMER_ONE_SHOT);
         }
       } else if (!HasValidTimestamps() &&
-                 m_sentence_buffer.size() >= BASE_MESSAGES_PER_BATCH) {
+                 m_sentence_buffer.size() >= kBaseMessagesPerBatch) {
         // For files that do not have timestamped records (or timestamps are not
         // in chronological order), use batch processing.
-        behindSchedule = false;  // This will break the loop.
+        behind_schedule = false;  // This will break the loop.
         FlushSentenceBuffer();
 
         // Calculate interval based on speed multiplier
-        int interval =
-            static_cast<int>(BASE_INTERVAL_MS / GetSpeedMultiplier());
+        int interval = static_cast<int>(kBaseIntervalMs / GetSpeedMultiplier());
 
         // Schedule next batch.
         m_timer->Start(interval, wxTIMER_ONE_SHOT);
       }
 
-      if (m_sentence_buffer.size() > MAX_MSG_BUFFER_SIZE) {
+      if (m_sentence_buffer.size() > kMaxBufferSize) {
         if (!m_messages_dropped) {
           wxLogMessage(
               "Playback dropping messages to maintain timing at %.0fx speed",
@@ -760,7 +758,7 @@ void vdr_pi::Notify() {
   }
 }
 
-void vdr_pi::OnVdrMsg(VdrMsgType type, const std::string msg) {
+void VdrPi::OnVdrMsg(VdrMsgType type, const std::string msg) {
   switch (type) {
     case VdrMsgType::kDebug:
       wxLogDebug(wxString(msg));
@@ -774,14 +772,14 @@ void vdr_pi::OnVdrMsg(VdrMsgType type, const std::string msg) {
   }
 }
 
-wxDateTime vdr_pi::GetNextPlaybackTime() const {
-  if (!m_currentTimestamp.IsValid() || !m_firstTimestamp.IsValid() ||
+wxDateTime VdrPi::GetNextPlaybackTime() const {
+  if (!m_current_timestamp.IsValid() || !m_first_timestamp.IsValid() ||
       !m_playback_base_time.IsValid()) {
-    return wxDateTime();  // Return invalid time if we don't have valid
-                          // timestamps
+    return {};  // Return invalid time if we don't have valid
+                // timestamps
   }
   // Calculate when this message should be played relative to playback start.
-  wxTimeSpan elapsedTime = m_currentTimestamp - m_firstTimestamp;
+  wxTimeSpan elapsedTime = m_current_timestamp - m_first_timestamp;
   wxLongLong ms = elapsedTime.GetMilliseconds();
   double scaledMs = ms.ToDouble() / GetSpeedMultiplier();
   wxTimeSpan scaledElapsed =
@@ -789,9 +787,9 @@ wxDateTime vdr_pi::GetNextPlaybackTime() const {
   return m_playback_base_time + scaledElapsed;
 }
 
-int vdr_pi::GetToolbarToolCount(void) { return 2; }
+int VdrPi::GetToolbarToolCount() { return 2; }
 
-void vdr_pi::OnToolbarToolCallback(int id) {
+void VdrPi::OnToolbarToolCallback(int id) {
   if (id == m_tb_item_id_play) {
     // Don't allow playback while recording
     if (m_recording) {
@@ -841,7 +839,7 @@ void vdr_pi::OnToolbarToolCallback(int id) {
                                .Show(true);
       m_pauimgr->AddPane(m_pvdrcontrol, pane);
       m_pauimgr->Update();
-      if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+      if (m_protocols.replay_mode == ReplayMode::kLoopback) {
         m_pvdrcontrol->EnableSpeedSlider(false);
       }
     } else {
@@ -875,27 +873,27 @@ void vdr_pi::OnToolbarToolCallback(int id) {
   }
 }
 
-bool vdr_pi::IsPlaying() const {
-  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+bool VdrPi::IsPlaying() const {
+  if (m_protocols.replay_mode == ReplayMode::kLoopback)
     return m_dm_replay_mgr->IsPlaying();
   return m_playing;
 }
 
-bool vdr_pi::IsError() const {
-  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+bool VdrPi::IsError() const {
+  if (m_protocols.replay_mode == ReplayMode::kLoopback)
     return m_dm_replay_mgr->IsError();
   return false;
 }
 
-bool vdr_pi::IsAtFileEnd() const {
-  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+bool VdrPi::IsAtFileEnd() const {
+  if (m_protocols.replay_mode == ReplayMode::kLoopback)
     return m_dm_replay_mgr->IsAtEnd();
-  return m_atFileEnd;
+  return m_at_file_end;
 }
 
-wxDateTime vdr_pi::GetCurrentTimestamp() const {
-  if (m_protocols.nmea0183ReplayMode != NMEA0183ReplayMode::LOOPBACK)
-    return m_currentTimestamp;
+wxDateTime VdrPi::GetCurrentTimestamp() const {
+  if (m_protocols.replay_mode != ReplayMode::kLoopback)
+    return m_current_timestamp;
 
   uint64_t stamp = m_dm_replay_mgr->GetCurrentTimestamp();
   wxDateTime date_time(time_t(stamp / 1000));
@@ -903,27 +901,27 @@ wxDateTime vdr_pi::GetCurrentTimestamp() const {
   return date_time;
 }
 
-void vdr_pi::SetColorScheme(PI_ColorScheme cs) {
+void VdrPi::SetColorScheme(PI_ColorScheme cs) {
   if (m_pvdrcontrol) {
     m_pvdrcontrol->SetColorScheme(cs);
   }
 }
 
-wxString vdr_pi::GenerateFilename() const {
+wxString VdrPi::GenerateFilename() const {
   wxDateTime now = wxDateTime::Now().ToUTC();
   wxString timestamp = now.Format("%Y%m%dT%H%M%SZ");
-  wxString extension = (m_data_format == VDRDataFormat::CSV) ? ".csv" : ".txt";
+  wxString extension = (m_data_format == VdrDataFormat::kCsv) ? ".csv" : ".txt";
   return "vdr_" + timestamp + extension;
 }
 
-bool vdr_pi::LoadConfig(void) {
-  wxFileConfig* pConf = (wxFileConfig*)m_pconfig;
+bool VdrPi::LoadConfig() {
+  auto* config = (wxFileConfig*)m_pconfig;
 
-  if (!pConf) return false;
+  if (!config) return false;
 
-  pConf->SetPath("/PlugIns/VDR");
-  pConf->Read("InputFilename", &m_ifilename, "");
-  pConf->Read("OutputFilename", &m_ofilename, "");
+  config->SetPath("/PlugIns/VDR");
+  config->Read("InputFilename", &m_ifilename, "");
+  config->Read("OutputFilename", &m_ofilename, "");
 
   // Default directory handling based on platform
 #ifdef __ANDROID__
@@ -934,98 +932,99 @@ bool vdr_pi::LoadConfig(void) {
 #endif
 
   // Recording preferences.
-  pConf->Read("RecordingDirectory", &m_recording_dir, defaultDir);
-  pConf->Read("Interval", &m_interval, 1000);
-  pConf->Read("LogRotate", &m_log_rotate, false);
-  pConf->Read("LogRotateInterval", &m_log_rotate_interval, 24);
-  pConf->Read("AutoStartRecording", &m_auto_start_recording, false);
-  pConf->Read("UseSpeedThreshold", &m_use_speed_threshold, false);
-  pConf->Read("SpeedThreshold", &m_speed_threshold, 0.5);
-  pConf->Read("StopDelay", &m_stop_delay, 10);  // Default 10 minutes
+  config->Read("RecordingDirectory", &m_recording_dir, defaultDir);
+  config->Read("Interval", &m_interval, 1000);
+  config->Read("LogRotate", &m_log_rotate, false);
+  config->Read("LogRotateInterval", &m_log_rotate_interval, 24);
+  config->Read("AutoStartRecording", &m_auto_start_recording, false);
+  config->Read("UseSpeedThreshold", &m_use_speed_threshold, false);
+  config->Read("SpeedThreshold", &m_speed_threshold, 0.5);
+  config->Read("StopDelay", &m_stop_delay, 10);  // Default 10 minutes
 
-  pConf->Read("EnableNMEA0183", &m_protocols.nmea0183, true);
-  pConf->Read("EnableNMEA2000", &m_protocols.nmea2000, false);
-  pConf->Read("EnableSignalK", &m_protocols.signalK, false);
+  config->Read("EnableNMEA0183", &m_protocols.nmea0183, true);
+  config->Read("EnableNMEA2000", &m_protocols.nmea2000, false);
+  config->Read("EnableSignalK", &m_protocols.signalK, false);
 
   int format;
-  pConf->Read("DataFormat", &format, static_cast<int>(VDRDataFormat::RawNMEA));
-  m_data_format = static_cast<VDRDataFormat>(format);
+  config->Read("DataFormat", &format,
+               static_cast<int>(VdrDataFormat::kRawNmea));
+  m_data_format = static_cast<VdrDataFormat>(format);
 
   // Replay preferences.
   int replayMode;
-  pConf->Read("NMEA0183ReplayMode", &replayMode,
-              static_cast<int>(NMEA0183ReplayMode::INTERNAL_API));
-  m_protocols.nmea0183ReplayMode = static_cast<NMEA0183ReplayMode>(replayMode);
+  config->Read("NMEA0183ReplayMode", &replayMode,
+               static_cast<int>(ReplayMode::kInternalApi));
+  m_protocols.replay_mode = static_cast<ReplayMode>(replayMode);
 
   // NMEA 0183 network settings
-  pConf->Read("NMEA0183_UseTCP", &m_protocols.nmea0183Net.useTCP, false);
-  pConf->Read("NMEA0183_Port", &m_protocols.nmea0183Net.port, 10111);
-  pConf->Read("NMEA0183_Enabled", &m_protocols.nmea0183Net.enabled, false);
+  config->Read("NMEA0183_UseTCP", &m_protocols.nmea0183Net.use_tcp, false);
+  config->Read("NMEA0183_Port", &m_protocols.nmea0183Net.port, 10111);
+  config->Read("NMEA0183_Enabled", &m_protocols.nmea0183Net.enabled, false);
 
   // NMEA 2000 network settings
-  pConf->Read("NMEA2000_UseTCP", &m_protocols.n2kNet.useTCP, false);
-  pConf->Read("NMEA2000_Port", &m_protocols.n2kNet.port, 10112);
-  pConf->Read("NMEA2000_Enabled", &m_protocols.n2kNet.enabled, false);
+  config->Read("NMEA2000_UseTCP", &m_protocols.n2kNet.use_tcp, false);
+  config->Read("NMEA2000_Port", &m_protocols.n2kNet.port, 10112);
+  config->Read("NMEA2000_Enabled", &m_protocols.n2kNet.enabled, false);
 
 #if 0
   // Signal K network settings
-  pConf->Read("SignalK_UseTCP", &m_protocols.signalKNet.useTCP, true);
-  pConf->Read("SignalK_Port", &m_protocols.signalKNet.port, 8375);
-  pConf->Read("SignalK_Enabled", &m_protocols.signalKNet.enabled, false);
+  config->Read("SignalK_UseTCP", &m_protocols.signalkNet.use_tcp, true);
+  config->Read("SignalK_Port", &m_protocols.signalkNet.port, 8375);
+  config->Read("SignalK_Enabled", &m_protocols.signalkNet.enabled, false);
 #endif
 
   return true;
 }
 
-bool vdr_pi::SaveConfig(void) {
-  wxFileConfig* pConf = (wxFileConfig*)m_pconfig;
+bool VdrPi::SaveConfig() {
+  auto* config = (wxFileConfig*)m_pconfig;
 
-  if (!pConf) return false;
+  if (!config) return false;
 
-  pConf->SetPath("/PlugIns/VDR");
+  config->SetPath("/PlugIns/VDR");
 
   // Recording preferences.
-  pConf->Write("InputFilename", m_ifilename);
-  pConf->Write("OutputFilename", m_ofilename);
-  pConf->Write("RecordingDirectory", m_recording_dir);
-  pConf->Write("Interval", m_interval);
-  pConf->Write("LogRotate", m_log_rotate);
-  pConf->Write("LogRotateInterval", m_log_rotate_interval);
-  pConf->Write("AutoStartRecording", m_auto_start_recording);
-  pConf->Write("UseSpeedThreshold", m_use_speed_threshold);
-  pConf->Write("SpeedThreshold", m_speed_threshold);
-  pConf->Write("StopDelay", m_stop_delay);
-  pConf->Write("DataFormat", static_cast<int>(m_data_format));
+  config->Write("InputFilename", m_ifilename);
+  config->Write("OutputFilename", m_ofilename);
+  config->Write("RecordingDirectory", m_recording_dir);
+  config->Write("Interval", m_interval);
+  config->Write("LogRotate", m_log_rotate);
+  config->Write("LogRotateInterval", m_log_rotate_interval);
+  config->Write("AutoStartRecording", m_auto_start_recording);
+  config->Write("UseSpeedThreshold", m_use_speed_threshold);
+  config->Write("SpeedThreshold", m_speed_threshold);
+  config->Write("StopDelay", m_stop_delay);
+  config->Write("DataFormat", static_cast<int>(m_data_format));
 
-  pConf->Write("EnableNMEA0183", m_protocols.nmea0183);
-  pConf->Write("EnableNMEA2000", m_protocols.nmea2000);
-  pConf->Write("EnableSignalK", m_protocols.signalK);
+  config->Write("EnableNMEA0183", m_protocols.nmea0183);
+  config->Write("EnableNMEA2000", m_protocols.nmea2000);
+  config->Write("EnableSignalK", m_protocols.signalK);
 
   // Replay preferences.
-  pConf->Write("NMEA0183ReplayMode",
-               static_cast<int>(m_protocols.nmea0183ReplayMode));
+  config->Write("NMEA0183ReplayMode",
+                static_cast<int>(m_protocols.replay_mode));
 
   // NMEA 0183 network settings
-  pConf->Write("NMEA0183_UseTCP", m_protocols.nmea0183Net.useTCP);
-  pConf->Write("NMEA0183_Port", m_protocols.nmea0183Net.port);
-  pConf->Write("NMEA0183_Enabled", m_protocols.nmea0183Net.enabled);
+  config->Write("NMEA0183_UseTCP", m_protocols.nmea0183Net.use_tcp);
+  config->Write("NMEA0183_Port", m_protocols.nmea0183Net.port);
+  config->Write("NMEA0183_Enabled", m_protocols.nmea0183Net.enabled);
 
   // NMEA 2000 network settings
-  pConf->Write("NMEA2000_UseTCP", m_protocols.n2kNet.useTCP);
-  pConf->Write("NMEA2000_Port", m_protocols.n2kNet.port);
-  pConf->Write("NMEA2000_Enabled", m_protocols.n2kNet.enabled);
+  config->Write("NMEA2000_UseTCP", m_protocols.n2kNet.use_tcp);
+  config->Write("NMEA2000_Port", m_protocols.n2kNet.port);
+  config->Write("NMEA2000_Enabled", m_protocols.n2kNet.enabled);
 
 #if 0
   // Signal K network settings
-  pConf->Write("SignalK_UseTCP", m_protocols.signalKNet.useTCP);
-  pConf->Write("SignalK_Port", m_protocols.signalKNet.port);
-  pConf->Write("SignalK_Enabled", m_protocols.signalKNet.enabled);
+  config->Write("SignalK_UseTCP", m_protocols.signalkNet.use_tcp);
+  config->Write("SignalK_Port", m_protocols.signalkNet.port);
+  config->Write("SignalK_Enabled", m_protocols.signalkNet.enabled);
 #endif
 
   return true;
 }
 
-void vdr_pi::StartRecording() {
+void VdrPi::StartRecording() {
   if (m_recording && !m_recording_paused) return;
 
   // Don't start recording if playback is active
@@ -1051,7 +1050,7 @@ void vdr_pi::StartRecording() {
   // the final location
   m_temp_outfile = *GetpPrivateApplicationDataLocation();
   m_temp_outfile += wxString("/vdr_temp") +
-                    (m_data_format == VDRDataFormat::CSV ? ".csv" : ".txt");
+                    (m_data_format == VdrDataFormat::kCsv ? ".csv" : ".txt");
   m_final_outfile = "/storage/emulated/0/Android/Documents/" + filename;
   fullpath = m_temp_outfile;
 #endif
@@ -1071,7 +1070,7 @@ void vdr_pi::StartRecording() {
   wxLogMessage("Start recording to file: %s", fullpath);
 
   // Write CSV header if needed
-  if (m_data_format == VDRDataFormat::CSV) {
+  if (m_data_format == VdrDataFormat::kCsv) {
     m_ostream.Write("timestamp,type,id,message\n");
   }
 
@@ -1081,7 +1080,7 @@ void vdr_pi::StartRecording() {
   m_current_recording_start = m_recording_start;
 }
 
-void vdr_pi::PauseRecording(const wxString& reason) {
+void VdrPi::PauseRecording(const wxString& reason) {
   if (!m_recording || m_recording_paused) return;
 
   wxLogMessage("Pause recording. Reason: %s", reason);
@@ -1089,12 +1088,12 @@ void vdr_pi::PauseRecording(const wxString& reason) {
   m_recording_pause_time = wxDateTime::Now().ToUTC();
 }
 
-void vdr_pi::ResumeRecording() {
+void VdrPi::ResumeRecording() {
   if (!m_recording_paused) return;
   m_recording_paused = false;
 }
 
-void vdr_pi::StopRecording(const wxString& reason) {
+void VdrPi::StopRecording(const wxString& reason) {
   if (!m_recording) return;
   wxLogMessage("Stop recording. Reason: %s", reason);
   m_ostream.Close();
@@ -1107,14 +1106,14 @@ void vdr_pi::StopRecording(const wxString& reason) {
 #endif
 }
 
-void vdr_pi::AdjustPlaybackBaseTime() {
-  if (!m_firstTimestamp.IsValid() || !m_currentTimestamp.IsValid()) {
+void VdrPi::AdjustPlaybackBaseTime() {
+  if (!m_first_timestamp.IsValid() || !m_current_timestamp.IsValid()) {
     return;
   }
 
   // Calculate how much time has "elapsed" in the recording up to our current
   // position.
-  wxTimeSpan elapsed = m_currentTimestamp - m_firstTimestamp;
+  wxTimeSpan elapsed = m_current_timestamp - m_first_timestamp;
 
   // Set base time so that current playback position corresponds to current wall
   // clock.
@@ -1124,7 +1123,7 @@ void vdr_pi::AdjustPlaybackBaseTime() {
           (elapsed.GetMilliseconds().ToDouble() / GetSpeedMultiplier())));
 }
 
-void vdr_pi::StartPlayback() {
+void VdrPi::StartPlayback() {
   if (m_ifilename.IsEmpty()) {
     if (m_pvdrcontrol) {
       m_pvdrcontrol->UpdateFileStatus(_("No file selected."));
@@ -1137,9 +1136,8 @@ void vdr_pi::StartPlayback() {
     }
     return;
   }
-  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
-    if (!m_dm_replay_mgr->IsPaused())
-      m_dm_replay_mgr = std::move(DmReplayMgrFactory());
+  if (m_protocols.replay_mode == ReplayMode::kLoopback) {
+    if (!m_dm_replay_mgr->IsPaused()) m_dm_replay_mgr = DmReplayMgrFactory();
     m_dm_replay_mgr->Start();
     if (m_dm_replay_mgr->IsPlaying())
       m_pvdrcontrol->UpdateFileStatus(_("File successfully loaded"));
@@ -1148,7 +1146,7 @@ void vdr_pi::StartPlayback() {
   }
 
   // Reset end-of-file state when starting playback
-  m_atFileEnd = false;
+  m_at_file_end = false;
 
   // Always adjust base time when starting playback, whether from pause or seek
   AdjustPlaybackBaseTime();
@@ -1185,8 +1183,8 @@ void vdr_pi::StartPlayback() {
   Notify();
 }
 
-void vdr_pi::PausePlayback() {
-  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+void VdrPi::PausePlayback() {
+  if (m_protocols.replay_mode == ReplayMode::kLoopback) {
     m_dm_replay_mgr->Pause();
     if (m_pvdrcontrol) m_pvdrcontrol->UpdateControls();
     return;
@@ -1199,7 +1197,7 @@ void vdr_pi::PausePlayback() {
   if (m_pvdrcontrol) m_pvdrcontrol->UpdateControls();
 }
 
-void vdr_pi::StopPlayback() {
+void VdrPi::StopPlayback() {
   if (!m_playing) return;
 
   m_timer->Stop();
@@ -1216,19 +1214,19 @@ void vdr_pi::StopPlayback() {
   }
 }
 
-VDRNetworkServer* vdr_pi::GetServer(const wxString& protocol) {
-  auto it = m_networkServers.find(protocol);
-  if (it == m_networkServers.end()) {
+VDRNetworkServer* VdrPi::GetServer(const wxString& protocol) {
+  auto it = m_network_servers.find(protocol);
+  if (it == m_network_servers.end()) {
     // Create new server instance if it doesn't exist.
     auto server = std::make_unique<VDRNetworkServer>();
     VDRNetworkServer* serverPtr = server.get();
-    m_networkServers[protocol] = std::move(server);
+    m_network_servers[protocol] = std::move(server);
     return serverPtr;
   }
   return it->second.get();
 }
 
-bool vdr_pi::InitializeNetworkServers() {
+bool VdrPi::InitializeNetworkServers() {
   bool success = true;
   wxString errors;
 
@@ -1236,17 +1234,17 @@ bool vdr_pi::InitializeNetworkServers() {
   if (m_protocols.nmea0183Net.enabled) {
     VDRNetworkServer* server = GetServer("NMEA0183");
     if (!server->IsRunning() ||
-        server->IsTCP() != m_protocols.nmea0183Net.useTCP ||
+        server->IsTCP() != m_protocols.nmea0183Net.use_tcp ||
         server->GetPort() != m_protocols.nmea0183Net.port) {
       server->Stop();  // Stop existing server if running
       wxString error;
-      if (!server->Start(m_protocols.nmea0183Net.useTCP,
+      if (!server->Start(m_protocols.nmea0183Net.use_tcp,
                          m_protocols.nmea0183Net.port, error)) {
         success = false;
         errors += error;
       } else {
         wxLogMessage("Started NMEA0183 server: %s on port %d",
-                     m_protocols.nmea0183Net.useTCP ? "TCP" : "UDP",
+                     m_protocols.nmea0183Net.use_tcp ? "TCP" : "UDP",
                      m_protocols.nmea0183Net.port);
       }
     }
@@ -1261,17 +1259,17 @@ bool vdr_pi::InitializeNetworkServers() {
   // Initialize NMEA2000 network server if needed
   if (m_protocols.n2kNet.enabled) {
     VDRNetworkServer* server = GetServer("N2K");
-    if (!server->IsRunning() || server->IsTCP() != m_protocols.n2kNet.useTCP ||
+    if (!server->IsRunning() || server->IsTCP() != m_protocols.n2kNet.use_tcp ||
         server->GetPort() != m_protocols.n2kNet.port) {
       server->Stop();  // Stop existing server if running
       wxString error;
-      if (!server->Start(m_protocols.n2kNet.useTCP, m_protocols.n2kNet.port,
+      if (!server->Start(m_protocols.n2kNet.use_tcp, m_protocols.n2kNet.port,
                          error)) {
         success = false;
         errors += error;
       } else {
         wxLogMessage("Started NMEA2000 server: %s on port %d",
-                     m_protocols.n2kNet.useTCP ? "TCP" : "UDP",
+                     m_protocols.n2kNet.use_tcp ? "TCP" : "UDP",
                      m_protocols.n2kNet.port);
       }
     }
@@ -1294,7 +1292,7 @@ bool vdr_pi::InitializeNetworkServers() {
   return success;
 }
 
-void vdr_pi::StopNetworkServers() {
+void VdrPi::StopNetworkServers() {
   // Stop NMEA0183 server if running
   if (VDRNetworkServer* server = GetServer("NMEA0183")) {
     if (server->IsRunning()) {
@@ -1312,7 +1310,7 @@ void vdr_pi::StopNetworkServers() {
   }
 }
 
-void vdr_pi::HandleNetworkPlayback(const wxString& data) {
+void VdrPi::HandleNetworkPlayback(const wxString& data) {
   // For NMEA 0183 data
   if (m_protocols.nmea0183Net.enabled &&
       (data.StartsWith("$") || data.StartsWith("!"))) {
@@ -1334,7 +1332,7 @@ void vdr_pi::HandleNetworkPlayback(const wxString& data) {
   }
 }
 
-void vdr_pi::SetDataFormat(VDRDataFormat format) {
+void VdrPi::SetDataFormat(VdrDataFormat format) {
   // If format hasn't changed, do nothing.
   if (format == m_data_format) {
     return;
@@ -1357,7 +1355,7 @@ void vdr_pi::SetDataFormat(VDRDataFormat format) {
   }
 }
 
-void vdr_pi::ShowPreferencesDialog(wxWindow* parent) {
+void VdrPi::ShowPreferencesDialog(wxWindow* parent) {
   VDRPrefsDialog dlg(parent, wxID_ANY, m_data_format, m_recording_dir,
                      m_log_rotate, m_log_rotate_interval,
                      m_auto_start_recording, m_use_speed_threshold,
@@ -1403,7 +1401,7 @@ void vdr_pi::ShowPreferencesDialog(wxWindow* parent) {
   }
 }
 
-void vdr_pi::ShowPreferencesDialogNative(wxWindow* parent) {
+void VdrPi::ShowPreferencesDialogNative(wxWindow* parent) {
   VDRPrefsDialog dlg(parent, wxID_ANY, m_data_format, m_recording_dir,
                      m_log_rotate, m_log_rotate_interval,
                      m_auto_start_recording, m_use_speed_threshold,
@@ -1438,7 +1436,7 @@ void vdr_pi::ShowPreferencesDialogNative(wxWindow* parent) {
   }
 }
 
-void vdr_pi::CheckLogRotation() {
+void VdrPi::CheckLogRotation() {
   if (!m_recording || !m_log_rotate) return;
 
   wxDateTime now = wxDateTime::Now().ToUTC();
@@ -1454,9 +1452,8 @@ void vdr_pi::CheckLogRotation() {
   }
 }
 
-bool vdr_pi::ParseNMEAComponents(wxString nmea, wxString& talkerId,
-                                 wxString& sentenceId,
-                                 bool& hasTimestamp) const {
+bool VdrPi::ParseNmeaComponents(wxString nmea, wxString& talkerId,
+                                wxString& sentence_id, bool& hasTimestamp) {
   // Basic length check - minimum NMEA sentence should be at least 10 chars
   // $GPGGA,*hh
   if (nmea.IsEmpty() || (nmea[0] != '$' && nmea[0] != '!')) {
@@ -1473,10 +1470,10 @@ bool vdr_pi::ParseNMEAComponents(wxString nmea, wxString& talkerId,
 
   // Extract talker ID (GP, GN, etc.) and sentence ID (RMC, ZDA, etc.)
   talkerId = header.Mid(1, 2);
-  sentenceId = header.Mid(3);
+  sentence_id = header.Mid(3);
 
   // Special handling for AIS messages starting with !
-  bool isAIS = (nmea[0] == '!');
+  bool is_ais = (nmea[0] == '!');
 
   // Validate talker ID:
   // - Must be exactly 2 chars
@@ -1487,7 +1484,7 @@ bool vdr_pi::ParseNMEAComponents(wxString nmea, wxString& talkerId,
     return false;
   }
 
-  if (isAIS) {
+  if (is_ais) {
     // For AIS messages, only accept specific talker IDs.
     if (talkerId != "AI" && talkerId != "AB" && talkerId != "BS") {
       return false;
@@ -1504,29 +1501,29 @@ bool vdr_pi::ParseNMEAComponents(wxString nmea, wxString& talkerId,
   // - Must be ASCII
   // - Must be alphabetic
   // - Must be uppercase
-  if (sentenceId.length() != 3 || !sentenceId.IsAscii() ||
-      !sentenceId.IsWord()) {
+  if (sentence_id.length() != 3 || !sentence_id.IsAscii() ||
+      !sentence_id.IsWord()) {
     return false;
   }
 
-  // Check if sentenceId is uppercase by comparing with its uppercase version
-  if (sentenceId != sentenceId.Upper()) {
+  // Check if sentence_id is uppercase by comparing with its uppercase version
+  if (sentence_id != sentence_id.Upper()) {
     return false;
   }
 
   // Additional validation: must contain comma after header and checksum after
   // data
-  size_t lastComma = nmea.Find(',');
-  size_t checksumPos = nmea.Find('*');
+  size_t last_comma = nmea.Find(',');
+  size_t checksum_pos = nmea.Find('*');
 
-  if (lastComma == wxString::npos || checksumPos == wxString::npos ||
-      checksumPos < lastComma) {
+  if (last_comma == wxString::npos || checksum_pos == wxString::npos ||
+      checksum_pos < last_comma) {
     return false;
   }
 
   // Check for known sentence types containing timestamps.
-  if (sentenceId == "RMC" || sentenceId == "ZDA" || sentenceId == "GGA" ||
-      sentenceId == "GBS" || sentenceId == "GLL") {
+  if (sentence_id == "RMC" || sentence_id == "ZDA" || sentence_id == "GGA" ||
+      sentence_id == "GBS" || sentence_id == "GLL") {
     hasTimestamp = true;
     return true;
   }
@@ -1535,9 +1532,9 @@ bool vdr_pi::ParseNMEAComponents(wxString nmea, wxString& talkerId,
   return true;
 }
 
-void vdr_pi::SelectPrimaryTimeSource() {
-  m_hasPrimaryTimeSource = false;
-  if (m_timeSources.empty()) return;
+void VdrPi::SelectPrimaryTimeSource() {
+  m_has_primary_time_source = false;
+  if (m_time_sources.empty()) return;
 
   // Scoring criteria for each source
   struct SourceScore {
@@ -1547,15 +1544,15 @@ void vdr_pi::SelectPrimaryTimeSource() {
 
   std::vector<SourceScore> scores;
 
-  for (const auto& source : m_timeSources) {
-    if (!source.second.isChronological) {
+  for (const auto& source : m_time_sources) {
+    if (!source.second.is_chronological) {
       // Skip sources with non-chronological timestamps
       continue;
     }
     SourceScore score = {source.first, 0};
     // Prefer sources with complete date+time
-    if (source.first.sentenceId.Contains("RMC") ||
-        source.first.sentenceId.Contains("ZDA")) {
+    if (source.first.sentence_id.Contains("RMC") ||
+        source.first.sentence_id.Contains("ZDA")) {
       score.score += 10;
     }
 
@@ -1572,41 +1569,40 @@ void vdr_pi::SelectPrimaryTimeSource() {
 
   // Select highest scoring source as primary
   if (!scores.empty()) {
-    m_primaryTimeSource = scores[0].source;
-    m_hasPrimaryTimeSource = true;
+    m_primary_time_source = scores[0].source;
+    m_has_primary_time_source = true;
   }
 }
 
-bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
-  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
-    return true;
+bool VdrPi::ScanFileTimestamps(bool& has_valid_timestamps, wxString& error) {
+  if (m_protocols.replay_mode == ReplayMode::kLoopback) return true;
   if (!m_istream.IsOpened()) {
     error = _("File not open");
-    hasValidTimestamps = false;
+    has_valid_timestamps = false;
     wxLogMessage("File not open");
     return false;
   }
   wxLogMessage("Scanning timestamps in %s", m_ifilename);
   // Reset all state
   m_has_timestamps = false;
-  m_firstTimestamp = wxDateTime();
-  m_lastTimestamp = wxDateTime();
-  m_currentTimestamp = wxDateTime();
-  m_timeSources.clear();
-  m_hasPrimaryTimeSource = false;
-  bool foundFirst = false;
-  wxDateTime previousTimestamp;
+  m_first_timestamp = wxDateTime();
+  m_last_timestamp = wxDateTime();
+  m_current_timestamp = wxDateTime();
+  m_time_sources.clear();
+  m_has_primary_time_source = false;
+  bool found_first = false;
+  wxDateTime previous_timestamp;
 
   // Read first line to check format
   wxString line = GetNextNonEmptyLine(true);
   if (m_istream.Eof() && line.IsEmpty()) {
     wxLogMessage("File is empty or contains only empty lines");
-    hasValidTimestamps = false;
+    has_valid_timestamps = false;
     // Empty file is not an error.
     error = "";
     return true;
   }
-  m_timestampParser.Reset();
+  m_timestamp_parser.Reset();
 
   // Try to parse as CSV file
   m_is_csv_file = ParseCSVHeader(line);
@@ -1621,28 +1617,28 @@ bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
         bool success = ParseCSVLineTimestamp(line, &nmea, &timestamp);
         if (success && timestamp.IsValid()) {
           // For CSV files, we require chronological order
-          if (previousTimestamp.IsValid() && timestamp < previousTimestamp) {
+          if (previous_timestamp.IsValid() && timestamp < previous_timestamp) {
             m_has_timestamps = false;
-            m_firstTimestamp = wxDateTime();
-            m_lastTimestamp = wxDateTime();
-            m_currentTimestamp = wxDateTime();
+            m_first_timestamp = wxDateTime();
+            m_last_timestamp = wxDateTime();
+            m_current_timestamp = wxDateTime();
             m_istream.GoToLine(0);
-            hasValidTimestamps = false;
+            has_valid_timestamps = false;
             error = _("Timestamps not in chronological order");
             wxLogMessage(
                 "CSV file contains non-chronological timestamps. "
                 "Previous: %s, Current: %s",
-                FormatIsoDateTime(previousTimestamp),
+                FormatIsoDateTime(previous_timestamp),
                 FormatIsoDateTime(timestamp));
             return false;
           }
-          previousTimestamp = timestamp;
-          m_lastTimestamp = timestamp;
+          previous_timestamp = timestamp;
+          m_last_timestamp = timestamp;
 
-          if (!foundFirst) {
-            m_firstTimestamp = timestamp;
-            m_currentTimestamp = timestamp;
-            foundFirst = true;
+          if (!found_first) {
+            m_first_timestamp = timestamp;
+            m_current_timestamp = timestamp;
+            found_first = true;
           }
           m_has_timestamps = true;  // Found at least one valid timestamp.
         }
@@ -1659,7 +1655,7 @@ bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
       if (!line.IsEmpty()) {
         wxString talkerId, sentenceId;
         bool hasTimestamp;
-        if (!ParseNMEAComponents(line, talkerId, sentenceId, hasTimestamp)) {
+        if (!ParseNmeaComponents(line, talkerId, sentenceId, hasTimestamp)) {
           invalidSentences++;
           lastInvalidLine = line;
           line = GetNextNonEmptyLine();
@@ -1671,28 +1667,28 @@ bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
         if (hasTimestamp) {
           // Create time source entry
           TimeSource source;
-          source.talkerId = talkerId;
-          source.sentenceId = sentenceId;
+          source.talker_id = talkerId;
+          source.sentence_id = sentenceId;
 
           wxDateTime timestamp;
-          if (m_timestampParser.ParseTimestamp(line, timestamp, precision)) {
+          if (m_timestamp_parser.ParseTimestamp(line, timestamp, precision)) {
             source.precision = precision;
-            if (m_timeSources.find(source) == m_timeSources.end()) {
+            if (m_time_sources.find(source) == m_time_sources.end()) {
               TimeSourceDetails details;
-              details.startTime = timestamp;
-              details.currentTime = timestamp;
-              details.endTime = timestamp;
-              details.isChronological = true;
-              m_timeSources[source] = details;
+              details.start_time = timestamp;
+              details.current_time = timestamp;
+              details.end_time = timestamp;
+              details.is_chronological = true;
+              m_time_sources[source] = details;
             } else {
               // Update existing source
-              TimeSourceDetails& details = m_timeSources[source];
+              TimeSourceDetails& details = m_time_sources[source];
               // Check if timestamps are still chronological
-              if (timestamp < details.currentTime) {
-                details.isChronological = false;
+              if (timestamp < details.current_time) {
+                details.is_chronological = false;
               }
-              details.currentTime = timestamp;
-              details.endTime = timestamp;
+              details.current_time = timestamp;
+              details.end_time = timestamp;
             }
             m_has_timestamps = true;
           }
@@ -1707,7 +1703,7 @@ bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
 
     // Only fail if we found no valid sentences at all
     if (validSentences == 0) {
-      hasValidTimestamps = false;
+      has_valid_timestamps = false;
       error = _("Invalid file");
       return false;
     }
@@ -1716,28 +1712,29 @@ bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
     SelectPrimaryTimeSource();
 
     if (m_has_timestamps) {
-      for (const auto& source : m_timeSources) {
+      for (const auto& source : m_time_sources) {
         wxLogMessage(
-            "  %s%s: precision=%d. isChronological=%d. Start=%s. End=%s",
-            source.first.talkerId, source.first.sentenceId,
-            source.first.precision, source.second.isChronological,
-            FormatIsoDateTime(source.second.startTime),
-            FormatIsoDateTime(source.second.endTime));
+            "  %s%s: precision=%d. is_chronological=%d. Start=%s. End=%s",
+            source.first.talker_id, source.first.sentence_id,
+            source.first.precision, source.second.is_chronological,
+            FormatIsoDateTime(source.second.start_time),
+            FormatIsoDateTime(source.second.end_time));
       }
-      if (m_hasPrimaryTimeSource) {
-        m_firstTimestamp = m_timeSources[m_primaryTimeSource].startTime;
-        m_currentTimestamp = m_firstTimestamp;
-        m_lastTimestamp = m_timeSources[m_primaryTimeSource].endTime;
-        m_timestampParser.SetPrimaryTimeSource(m_primaryTimeSource.talkerId,
-                                               m_primaryTimeSource.sentenceId,
-                                               m_primaryTimeSource.precision);
+      if (m_has_primary_time_source) {
+        m_first_timestamp = m_time_sources[m_primary_time_source].start_time;
+        m_current_timestamp = m_first_timestamp;
+        m_last_timestamp = m_time_sources[m_primary_time_source].end_time;
+        m_timestamp_parser.SetPrimaryTimeSource(
+            m_primary_time_source.talker_id, m_primary_time_source.sentence_id,
+            m_primary_time_source.precision);
 
         wxLogMessage(
             "Using %s%s (precision=%d) as primary time source. Start=%s. "
             "End=%s",
-            m_primaryTimeSource.talkerId, m_primaryTimeSource.sentenceId,
-            m_primaryTimeSource.precision, FormatIsoDateTime(m_firstTimestamp),
-            FormatIsoDateTime(m_lastTimestamp));
+            m_primary_time_source.talker_id, m_primary_time_source.sentence_id,
+            m_primary_time_source.precision,
+            FormatIsoDateTime(m_first_timestamp),
+            FormatIsoDateTime(m_last_timestamp));
       }
     } else {
       wxLogMessage("No timestamps found in NMEA file %s", m_ifilename);
@@ -1753,12 +1750,12 @@ bool vdr_pi::ScanFileTimestamps(bool& hasValidTimestamps, wxString& error) {
   // increasing timestamps, in which case we cannot use timestamps for
   // playback. In this case, we will still allow playback based on line
   // number.
-  hasValidTimestamps = m_has_timestamps;
+  has_valid_timestamps = m_has_timestamps;
   error = "";
   return true;
 }
 
-wxString vdr_pi::GetNextNonEmptyLine(bool fromStart) {
+wxString VdrPi::GetNextNonEmptyLine(bool fromStart) {
   if (!m_istream.IsOpened()) return "";
 
   wxString line;
@@ -1779,7 +1776,7 @@ wxString vdr_pi::GetNextNonEmptyLine(bool fromStart) {
   return line;
 }
 
-bool vdr_pi::SeekToFraction(double fraction) {
+bool VdrPi::SeekToFraction(double fraction) {
   // Validate input
   if (fraction < 0.0 || fraction > 1.0) {
     wxLogWarning("Invalid seek fraction: %f", fraction);
@@ -1808,10 +1805,10 @@ bool vdr_pi::SeekToFraction(double fraction) {
     }
 
     // Calculate target timestamp
-    wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;
+    wxTimeSpan totalSpan = m_last_timestamp - m_first_timestamp;
     wxTimeSpan targetSpan =
         wxTimeSpan::Seconds((totalSpan.GetSeconds().ToDouble() * fraction));
-    wxDateTime targetTime = m_firstTimestamp + targetSpan;
+    wxDateTime targetTime = m_first_timestamp + targetSpan;
 
     // Scan file until we find first message after target time
     wxString line = GetNextNonEmptyLine(true);  // Skip header
@@ -1823,7 +1820,7 @@ bool vdr_pi::SeekToFraction(double fraction) {
       bool success = ParseCSVLineTimestamp(line, &nmea, &timestamp);
       if (success && timestamp.IsValid() && timestamp >= targetTime) {
         // Found our position, prepare to play from here
-        m_currentTimestamp = timestamp;
+        m_current_timestamp = timestamp;
         if (m_playing) {
           AdjustPlaybackBaseTime();
         }
@@ -1840,10 +1837,10 @@ bool vdr_pi::SeekToFraction(double fraction) {
     if (!HasValidTimestamps()) {
       return false;
     }
-    wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;
+    wxTimeSpan totalSpan = m_last_timestamp - m_first_timestamp;
     wxTimeSpan targetSpan =
         wxTimeSpan::Seconds((totalSpan.GetSeconds().ToDouble() * fraction));
-    wxDateTime targetTime = m_firstTimestamp + targetSpan;
+    wxDateTime targetTime = m_first_timestamp + targetSpan;
 
     // Scan file for closest timestamp
     m_istream.GoToLine(0);
@@ -1855,9 +1852,9 @@ bool vdr_pi::SeekToFraction(double fraction) {
     while (!m_istream.Eof()) {
       line = GetNextNonEmptyLine();
       wxDateTime timestamp;
-      if (m_timestampParser.ParseTimestamp(line, timestamp, precision)) {
+      if (m_timestamp_parser.ParseTimestamp(line, timestamp, precision)) {
         if (timestamp >= targetTime) {
-          m_currentTimestamp = timestamp;
+          m_current_timestamp = timestamp;
           foundPosition = true;
           break;
         }
@@ -1876,19 +1873,19 @@ bool vdr_pi::SeekToFraction(double fraction) {
   return false;
 }
 
-bool vdr_pi::HasValidTimestamps() const {
-  return m_has_timestamps && m_firstTimestamp.IsValid() &&
-         m_lastTimestamp.IsValid() && m_currentTimestamp.IsValid();
+bool VdrPi::HasValidTimestamps() const {
+  return m_has_timestamps && m_first_timestamp.IsValid() &&
+         m_last_timestamp.IsValid() && m_current_timestamp.IsValid();
 }
 
-double vdr_pi::GetProgressFraction() const {
-  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK)
+double VdrPi::GetProgressFraction() const {
+  if (m_protocols.replay_mode == ReplayMode::kLoopback)
     return m_dm_replay_mgr->GetProgressFraction();
 
   // For files with timestamps
   if (HasValidTimestamps()) {
-    wxTimeSpan totalSpan = m_lastTimestamp - m_firstTimestamp;
-    wxTimeSpan currentSpan = m_currentTimestamp - m_firstTimestamp;
+    wxTimeSpan totalSpan = m_last_timestamp - m_first_timestamp;
+    wxTimeSpan currentSpan = m_current_timestamp - m_first_timestamp;
 
     if (totalSpan.GetSeconds().ToLong() == 0) {
       return 0.0;
@@ -1913,14 +1910,14 @@ double vdr_pi::GetProgressFraction() const {
   return 0.0;
 }
 
-void vdr_pi::ClearInputFile() {
+void VdrPi::ClearInputFile() {
   m_ifilename.Clear();
   if (m_istream.IsOpened()) {
     m_istream.Close();
   }
 }
 
-wxString vdr_pi::GetInputFile() const {
+wxString VdrPi::GetInputFile() const {
   if (!m_ifilename.IsEmpty()) {
     if (wxFileExists(m_ifilename)) {
       return m_ifilename;
@@ -1929,7 +1926,7 @@ wxString vdr_pi::GetInputFile() const {
   return "";
 }
 
-std::unique_ptr<DataMonitorReplayMgr> vdr_pi::DmReplayMgrFactory() {
+std::unique_ptr<DataMonitorReplayMgr> VdrPi::DmReplayMgrFactory() {
   auto update_controls = [&] { m_pvdrcontrol->UpdateControls(); };
   auto user_message = [&](VdrMsgType t, const std::string& s) {
     OnVdrMsg(t, s);
@@ -1938,13 +1935,13 @@ std::unique_ptr<DataMonitorReplayMgr> vdr_pi::DmReplayMgrFactory() {
                                                 update_controls, user_message);
 }
 
-bool vdr_pi::LoadFile(const wxString& filename, wxString* error) {
+bool VdrPi::LoadFile(const wxString& filename, wxString* error) {
   if (IsPlaying()) {
     StopPlayback();
   }
 
   m_ifilename = filename;
-  if (m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK) {
+  if (m_protocols.replay_mode == ReplayMode::kLoopback) {
     m_dm_replay_mgr = std::move(DmReplayMgrFactory());
   }
 
@@ -1953,7 +1950,7 @@ bool vdr_pi::LoadFile(const wxString& filename, wxString* error) {
   m_timestamp_idx = static_cast<unsigned int>(-1);
   m_message_idx = static_cast<unsigned int>(-1);
   m_header_fields.Clear();
-  m_atFileEnd = false;
+  m_at_file_end = false;
 
   // Close existing file if open
   if (m_istream.IsOpened()) {
@@ -1968,7 +1965,7 @@ bool vdr_pi::LoadFile(const wxString& filename, wxString* error) {
   return true;
 }
 
-void vdr_pi::SetToolbarToolStatus(int id, bool status) {
+void VdrPi::SetToolbarToolStatus(int id, bool status) {
   if (id == m_tb_item_id_play || id == m_tb_item_id_record) {
     SetToolbarItemState(id, status);
   }

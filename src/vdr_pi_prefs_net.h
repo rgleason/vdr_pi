@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  **************************************************************************/
 
-#ifndef _VDR_PI_PREFS_NET_H_
-#define _VDR_PI_PREFS_NET_H_
+#ifndef VDR_PI_PREFS_NET_H_
+#define VDR_PI_PREFS_NET_H_
 
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
@@ -44,7 +44,7 @@ public:
                           const ConnectionSettings& settings);
 
   /** Get current connection settings from controls */
-  ConnectionSettings GetSettings() const;
+  [[nodiscard]] ConnectionSettings GetSettings() const;
 
   /** Update controls with new settings */
   void SetSettings(const ConnectionSettings& settings);
@@ -56,12 +56,12 @@ private:
   /** Update enabled state of controls */
   void UpdateControlStates();
 
-  wxCheckBox* m_enableCheck;  //!< Enable network output
-  wxRadioButton* m_tcpRadio;  //!< Use TCP protocol
-  wxRadioButton* m_udpRadio;  //!< Use UDP protocol
-  wxSpinCtrl* m_portCtrl;     //!< Port number control
+  wxCheckBox* m_enable_check;  //!< Enable network output
+  wxRadioButton* m_tcp_radio;  //!< Use TCP protocol
+  wxRadioButton* m_udp_radio;  //!< Use UDP protocol
+  wxSpinCtrl* m_port_ctrl;     //!< Port number control
 
   DECLARE_EVENT_TABLE()
 };
 
-#endif  // _VDR_PI_PREFS_NET_H_
+#endif  // VDR_PI_PREFS_NET_H_

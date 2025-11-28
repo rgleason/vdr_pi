@@ -34,7 +34,7 @@ VDRNetworkServer::VDRNetworkServer()
       m_udpSocket(nullptr),
       m_running(false),
       m_useTCP(true),
-      m_port(DEFAULT_PORT) {
+      m_port(kDefaultPort) {
   // Initialize socket handling
   wxSocketBase::Initialize();
 }

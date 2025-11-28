@@ -55,23 +55,23 @@ EVT_COMMAND_SCROLL_THUMBRELEASE(ID_VDR_PROGRESS,
                                 VDRControl::OnProgressSliderEndDrag)
 END_EVENT_TABLE()
 
-bool VDRControl::LoadFile(wxString currentFile) {
+bool VDRControl::LoadFile(wxString current_file) {
   bool status = true;
   wxString error;
   UpdatePlaybackStatus(_("Stopped"));
   UpdateNetworkStatus("");
-  if (m_pvdr->LoadFile(currentFile, &error)) {
+  if (m_pvdr->LoadFile(current_file, &error)) {
     bool hasValidTimestamps;
     wxString error;
     bool success = m_pvdr->ScanFileTimestamps(hasValidTimestamps, error);
-    UpdateFileLabel(currentFile);
+    UpdateFileLabel(current_file);
     if (!success) {
       UpdateFileStatus(error);
       status = false;
     } else {
       UpdateFileStatus(_("File loaded successfully"));
     }
-    m_progressSlider->SetValue(0);
+    m_progress_slider->SetValue(0);
     UpdateControls();
   } else {
     // If loading fails, clear the saved filename
@@ -84,15 +84,15 @@ bool VDRControl::LoadFile(wxString currentFile) {
   return status;
 }
 
-VDRControl::VDRControl(wxWindow* parent, wxWindowID id, vdr_pi* vdr)
+VDRControl::VDRControl(wxWindow* parent, wxWindowID id, VdrPi* vdr)
     : wxWindow(parent, id, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE,
                "VDR Control"),
       m_pvdr(vdr),
-      m_isDragging(false),
-      m_wasPlayingBeforeDrag(false) {
+      m_is_dragging(false),
+      m_was_playing_before_drag(false) {
   wxColour cl;
   GetGlobalColor("DILG1", &cl);
-  SetBackgroundColour(cl);
+  wxWindow::SetBackgroundColour(cl);
 
   CreateControls();
 
@@ -109,137 +109,138 @@ VDRControl::VDRControl(wxWindow* parent, wxWindowID id, vdr_pi* vdr)
 
 void VDRControl::CreateControls() {
   // Main vertical sizer
-  wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
+  wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
 
   // Ensure minimum button size of 7 mm for touch usability
   double pixel_per_mm = wxGetDisplaySize().x / PlugInGetDisplaySizeMM();
-  m_buttonSize = 7 * pixel_per_mm;
+  m_button_size = 7 * pixel_per_mm;
 #ifdef __WXQT__
   // A simple way to get touch-compatible tool size
   wxRect tbRect = GetMasterToolbarRect();
-  m_buttonSize = std::max(m_buttonSize, tbRect.width / 2);
+  m_button_size = std::max(m_button_size, tbRect.width / 2);
 #endif
-  wxSize buttonDimension(m_buttonSize, m_buttonSize);
-  int svg_size = m_buttonSize * OCPN_GetWinDIPScaleFactor();
+  wxSize buttonDimension(m_button_size, m_button_size);
+  int svg_size = m_button_size * OCPN_GetWinDIPScaleFactor();
 
   // File information section
-  wxBoxSizer* fileSizer = new wxBoxSizer(wxHORIZONTAL);
+  wxBoxSizer* file_sizer = new wxBoxSizer(wxHORIZONTAL);
 
   // Settings button
-  m_settingsBtn = new wxBitmapButton(
+  m_settings_btn = new wxBitmapButton(
       this, ID_VDR_SETTINGS,
-      GetBitmapFromSVGFile(_svg_settings, svg_size, svg_size),
+      GetBitmapFromSVGFile(g_svg_settings, svg_size, svg_size),
       wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
-  m_settingsBtn->SetToolTip(_("Settings"));
-  fileSizer->Add(m_settingsBtn, 0, wxALL, 2);
+  m_settings_btn->SetToolTip(_("Settings"));
+  file_sizer->Add(m_settings_btn, 0, wxALL, 2);
 
   // Load button
-  m_loadBtn = new wxBitmapButton(
+  m_load_btn = new wxBitmapButton(
       this, ID_VDR_LOAD,
-      GetBitmapFromSVGFile(_svg_file_open, svg_size, svg_size),
+      GetBitmapFromSVGFile(g_svg_file_open, svg_size, svg_size),
       wxDefaultPosition, buttonDimension, wxBU_EXACTFIT);
-  m_loadBtn->SetToolTip(_("Load VDR File"));
-  fileSizer->Add(m_loadBtn, 0, wxALL, 2);
+  m_load_btn->SetToolTip(_("Load VDR File"));
+  file_sizer->Add(m_load_btn, 0, wxALL, 2);
 
-  m_fileLabel =
+  m_file_label =
       new wxStaticText(this, wxID_ANY, _("No file loaded"), wxDefaultPosition,
                        wxDefaultSize, wxST_ELLIPSIZE_START);
-  fileSizer->Add(m_fileLabel, 1, wxALL | wxEXPAND, 2);
+  file_sizer->Add(m_file_label, 1, wxALL | wxEXPAND, 2);
 
-  mainSizer->Add(fileSizer, 0, wxALL, 4);
+  main_sizer->Add(file_sizer, 0, wxALL, 4);
 
   // Play controls and progress in one row
-  wxBoxSizer* controlSizer = new wxBoxSizer(wxHORIZONTAL);
+  auto* control_sizer = new wxBoxSizer(wxHORIZONTAL);
 
   // Play button setup
-  m_playBtnTooltip = _("Start Playback");
-  m_pauseBtnTooltip = _("Pause Playback");
-  m_stopBtnTooltip = _("End of File");
+  m_play_btn_tooltip = _("Start Playback");
+  m_pause_btn_tooltip = _("Pause Playback");
+  m_stop_btn_tooltip = _("End of File");
 
-  m_playPauseBtn = new wxBitmapButton(
+  m_play_pause_btn = new wxBitmapButton(
       this, ID_VDR_PLAY_PAUSE,
-      GetBitmapFromSVGFile(_svg_play_circle, svg_size, svg_size),
+      GetBitmapFromSVGFile(g_svg_play_circle, svg_size, svg_size),
       wxDefaultPosition, buttonDimension, wxBU_EXACTFIT);
-  m_playPauseBtn->SetToolTip(m_playBtnTooltip);
-  controlSizer->Add(m_playPauseBtn, 0, wxALL, 3);
+  m_play_pause_btn->SetToolTip(m_play_btn_tooltip);
+  control_sizer->Add(m_play_pause_btn, 0, wxALL, 3);
 
   // Progress slider in the same row as play button
-  m_progressSlider =
+  m_progress_slider =
       new wxSlider(this, ID_VDR_PROGRESS, 0, 0, 1000, wxDefaultPosition,
                    wxDefaultSize, wxSL_HORIZONTAL | wxSL_BOTTOM);
-  controlSizer->Add(m_progressSlider, 1, wxALIGN_CENTER_VERTICAL, 0);
-  mainSizer->Add(controlSizer, 0, wxEXPAND | wxALL, 4);
+  control_sizer->Add(m_progress_slider, 1, wxALIGN_CENTER_VERTICAL, 0);
+  main_sizer->Add(control_sizer, 0, wxEXPAND | wxALL, 4);
 
   // Time label
-  m_timeLabel = new wxStaticText(this, wxID_ANY, _("Date and Time: --"),
-                                 wxDefaultPosition, wxSize(200, -1));
-  mainSizer->Add(m_timeLabel, 0, wxEXPAND | wxALL, 4);
+  m_time_label = new wxStaticText(this, wxID_ANY, _("Date and Time: --"),
+                                  wxDefaultPosition, wxSize(200, -1));
+  main_sizer->Add(m_time_label, 0, wxEXPAND | wxALL, 4);
 
   // Speed control
-  wxBoxSizer* speedSizer = new wxBoxSizer(wxHORIZONTAL);
-  speedSizer->Add(new wxStaticText(this, wxID_ANY, _("Speed:")), 0,
-                  wxALIGN_CENTER_VERTICAL | wxRIGHT, 3);
-  m_speedSlider =
+  auto* speed_sizer = new wxBoxSizer(wxHORIZONTAL);
+  speed_sizer->Add(new wxStaticText(this, wxID_ANY, _("Speed:")), 0,
+                   wxALIGN_CENTER_VERTICAL | wxRIGHT, 3);
+  m_speed_slider =
       new wxSlider(this, wxID_ANY, 1, 1, 1000, wxDefaultPosition, wxDefaultSize,
                    wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-  speedSizer->Add(m_speedSlider, 1, wxALL | wxEXPAND, 0);
-  mainSizer->Add(speedSizer, 0, wxEXPAND | wxALL, 4);
+  speed_sizer->Add(m_speed_slider, 1, wxALL | wxEXPAND, 0);
+  main_sizer->Add(speed_sizer, 0, wxEXPAND | wxALL, 4);
 
   // Add status panel
-  wxStaticBox* statusBox = new wxStaticBox(this, wxID_ANY, _("Status"));
-  wxStaticBoxSizer* statusSizer = new wxStaticBoxSizer(statusBox, wxVERTICAL);
+  auto* status_box = new wxStaticBox(this, wxID_ANY, _("Status"));
+  auto* status_sizer = new wxStaticBoxSizer(status_box, wxVERTICAL);
 
   // File status
-  wxBoxSizer* fileStatusSizer = new wxBoxSizer(wxHORIZONTAL);
-  fileStatusSizer->Add(new wxStaticText(this, wxID_ANY, _("File: ")), 0,
-                       wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-  m_fileStatusLabel = new wxStaticText(this, wxID_ANY, "");
-  fileStatusSizer->Add(m_fileStatusLabel, 1, wxALIGN_CENTER_VERTICAL);
-  statusSizer->Add(fileStatusSizer, 0, wxEXPAND | wxALL, 5);
+  wxBoxSizer* file_status_sizer = new wxBoxSizer(wxHORIZONTAL);
+  file_status_sizer->Add(new wxStaticText(this, wxID_ANY, _("File: ")), 0,
+                         wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+  m_file_status_lbl = new wxStaticText(this, wxID_ANY, "");
+  file_status_sizer->Add(m_file_status_lbl, 1, wxALIGN_CENTER_VERTICAL);
+  status_sizer->Add(file_status_sizer, 0, wxEXPAND | wxALL, 5);
 
   // Network status
-  wxBoxSizer* networkStatusSizer = new wxBoxSizer(wxHORIZONTAL);
-  networkStatusSizer->Add(new wxStaticText(this, wxID_ANY, _("Network: ")), 0,
-                          wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-  m_networkStatusLabel = new wxStaticText(this, wxID_ANY, "");
-  networkStatusSizer->Add(m_networkStatusLabel, 1, wxALIGN_CENTER_VERTICAL);
-  statusSizer->Add(networkStatusSizer, 0, wxEXPAND | wxALL, 5);
+  auto* network_status_sizer = new wxBoxSizer(wxHORIZONTAL);
+  network_status_sizer->Add(new wxStaticText(this, wxID_ANY, _("Network: ")), 0,
+                            wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+  m_network_status_lbl = new wxStaticText(this, wxID_ANY, "");
+  network_status_sizer->Add(m_network_status_lbl, 1, wxALIGN_CENTER_VERTICAL);
+  status_sizer->Add(network_status_sizer, 0, wxEXPAND | wxALL, 5);
 
   // Playback status
-  wxBoxSizer* playbackStatusSizer = new wxBoxSizer(wxHORIZONTAL);
-  playbackStatusSizer->Add(new wxStaticText(this, wxID_ANY, _("Playback: ")), 0,
-                           wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-  m_playbackStatusLabel = new wxStaticText(this, wxID_ANY, "");
-  playbackStatusSizer->Add(m_playbackStatusLabel, 1, wxALIGN_CENTER_VERTICAL);
-  statusSizer->Add(playbackStatusSizer, 0, wxEXPAND | wxALL, 5);
+  auto* playback_status_sizer = new wxBoxSizer(wxHORIZONTAL);
+  playback_status_sizer->Add(new wxStaticText(this, wxID_ANY, _("Playback: ")),
+                             0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+  m_playback_status_lbl = new wxStaticText(this, wxID_ANY, "");
+  playback_status_sizer->Add(m_playback_status_lbl, 1, wxALIGN_CENTER_VERTICAL);
+  status_sizer->Add(playback_status_sizer, 0, wxEXPAND | wxALL, 5);
 
-  mainSizer->Add(statusSizer, 0, wxEXPAND | wxALL, 5);
+  main_sizer->Add(status_sizer, 0, wxEXPAND | wxALL, 5);
 
-  SetSizer(mainSizer);
-  wxClientDC dc(m_timeLabel);
-  wxSize textExtent = dc.GetTextExtent(_("Date and Time: YYYY-MM-DD HH:MM:SS"));
-  int minWidth = std::min(300, textExtent.GetWidth() + 20);  // 20px padding
-  mainSizer->SetMinSize(wxSize(minWidth, -1));
+  SetSizer(main_sizer);
+  wxClientDC dc(m_time_label);
+  wxSize text_extent =
+      dc.GetTextExtent(_("Date and Time: YYYY-MM-DD HH:MM:SS"));
+  int min_width = std::min(300, text_extent.GetWidth() + 20);  // 20px padding
+  main_sizer->SetMinSize(wxSize(min_width, -1));
   Layout();
-  mainSizer->Fit(this);
+  main_sizer->Fit(this);
 
   // Initial state
   UpdateControls();
 }
 
 void VDRControl::SetSpeedMultiplier(int value) {
-  value = std::max(value, m_speedSlider->GetMin());
-  value = std::min(value, m_speedSlider->GetMax());
-  m_speedSlider->SetValue(value);
+  value = std::max(value, m_speed_slider->GetMin());
+  value = std::min(value, m_speed_slider->GetMax());
+  m_speed_slider->SetValue(value);
 }
 
 void VDRControl::UpdateTimeLabel() {
   if (m_pvdr->GetCurrentTimestamp().IsValid()) {
-    wxString timeStr =
+    wxString time_str =
         m_pvdr->GetCurrentTimestamp().ToUTC().Format("%Y-%m-%d %H:%M:%S UTC");
-    m_timeLabel->SetLabel("Date and Time: " + timeStr);
+    m_time_label->SetLabel("Date and Time: " + time_str);
   } else {
-    m_timeLabel->SetLabel(_("Date and Time: --"));
+    m_time_label->SetLabel(_("Date and Time: --"));
   }
 }
 
@@ -272,21 +273,21 @@ void VDRControl::OnLoadButton(wxCommandEvent& event) {
 }
 
 void VDRControl::OnProgressSliderUpdated(wxScrollEvent& event) {
-  if (!m_isDragging) {
-    m_isDragging = true;
-    m_wasPlayingBeforeDrag = m_pvdr->IsPlaying();
-    if (m_wasPlayingBeforeDrag) {
+  if (!m_is_dragging) {
+    m_is_dragging = true;
+    m_was_playing_before_drag = m_pvdr->IsPlaying();
+    if (m_was_playing_before_drag) {
       PausePlayback();
     }
   }
   if (m_pvdr->GetFirstTimestamp().IsValid() &&
       m_pvdr->GetLastTimestamp().IsValid()) {
     // Update time display while dragging but don't seek yet
-    double fraction = m_progressSlider->GetValue() / 1000.0;
-    wxTimeSpan totalSpan =
+    double fraction = m_progress_slider->GetValue() / 1000.0;
+    wxTimeSpan total_span =
         m_pvdr->GetLastTimestamp() - m_pvdr->GetFirstTimestamp();
     wxTimeSpan currentSpan =
-        wxTimeSpan::Seconds((totalSpan.GetSeconds().ToDouble() * fraction));
+        wxTimeSpan::Seconds((total_span.GetSeconds().ToDouble() * fraction));
     m_pvdr->SetCurrentTimestamp(m_pvdr->GetFirstTimestamp() + currentSpan);
     UpdateTimeLabel();
   }
@@ -294,71 +295,71 @@ void VDRControl::OnProgressSliderUpdated(wxScrollEvent& event) {
 }
 
 void VDRControl::OnProgressSliderEndDrag(wxScrollEvent& event) {
-  double fraction = m_progressSlider->GetValue() / 1000.0;
+  double fraction = m_progress_slider->GetValue() / 1000.0;
   m_pvdr->SeekToFraction(fraction);
   // Reset the end-of-file state when user drags the slider, the button should
   // change to "play" state.
   m_pvdr->ResetEndOfFile();
-  if (m_wasPlayingBeforeDrag) {
+  if (m_was_playing_before_drag) {
     StartPlayback();
   }
-  m_isDragging = false;
+  m_is_dragging = false;
   UpdateControls();
   event.Skip();
 }
 
 void VDRControl::UpdateControls() {
-  bool hasFile = !m_pvdr->GetInputFile().IsEmpty();
-  bool isRecording = m_pvdr->IsRecording();
-  bool isPlaying = m_pvdr->IsPlaying();
-  bool isAtEnd = m_pvdr->IsAtFileEnd();
+  bool has_file = !m_pvdr->GetInputFile().IsEmpty();
+  bool is_recording = m_pvdr->IsRecording();
+  bool is_playing = m_pvdr->IsPlaying();
+  bool is_at_end = m_pvdr->IsAtFileEnd();
 
   // Update the play/pause/stop button appearance
-  if (isAtEnd) {
-    m_playPauseBtn->SetBitmapLabel(
-        GetBitmapFromSVGFile(_svg_stop_circle, m_buttonSize, m_buttonSize));
-    m_playPauseBtn->SetToolTip(m_stopBtnTooltip);
-    m_progressSlider->SetValue(1000);
+  if (is_at_end) {
+    m_play_pause_btn->SetBitmapLabel(
+        GetBitmapFromSVGFile(g_svg_stop_circle, m_button_size, m_button_size));
+    m_play_pause_btn->SetToolTip(m_stop_btn_tooltip);
+    m_progress_slider->SetValue(1000);
     UpdateFileStatus(_("End of file"));
   } else {
-    m_playPauseBtn->SetBitmapLabel(
-        GetBitmapFromSVGFile(isPlaying ? _svg_pause_circle : _svg_play_circle,
-                             m_buttonSize, m_buttonSize));
-    m_playPauseBtn->SetToolTip(isPlaying ? m_pauseBtnTooltip
-                                         : m_playBtnTooltip);
+    m_play_pause_btn->SetBitmapLabel(GetBitmapFromSVGFile(
+        is_playing ? g_svg_pause_circle : g_svg_play_circle, m_button_size,
+        m_button_size));
+    m_play_pause_btn->SetToolTip(is_playing ? m_pause_btn_tooltip
+                                            : m_play_btn_tooltip);
     if (m_pvdr->IsError()) UpdateFileStatus(_("Error"));
   }
 
   // Enable/disable controls based on state
-  m_loadBtn->Enable(!isRecording && !isPlaying);
-  m_playPauseBtn->Enable(hasFile && !isRecording);
-  m_settingsBtn->Enable(!isPlaying && !isRecording);
-  m_progressSlider->Enable(hasFile && !isRecording);
+  m_load_btn->Enable(!is_recording && !is_playing);
+  m_play_pause_btn->Enable(has_file && !is_recording);
+  m_settings_btn->Enable(!is_playing && !is_recording);
+  m_progress_slider->Enable(has_file && !is_recording);
 
   // Update toolbar state
-  m_pvdr->SetToolbarToolStatus(m_pvdr->GetPlayToolbarItemId(), isPlaying);
+  m_pvdr->SetToolbarToolStatus(m_pvdr->GetPlayToolbarItemId(), is_playing);
 
   // Update time display
-  if (hasFile && m_pvdr->GetCurrentTimestamp().IsValid()) {
-    wxString timeStr =
+  if (has_file && m_pvdr->GetCurrentTimestamp().IsValid()) {
+    wxString time_str =
         m_pvdr->GetCurrentTimestamp().ToUTC().Format("%Y-%m-%d %H:%M:%S UTC");
-    m_timeLabel->SetLabel(_("Date and Time: ") + timeStr);
+    m_time_label->SetLabel(_("Date and Time: ") + time_str);
   } else {
-    m_timeLabel->SetLabel(_("Date and Time: ") + "--");
+    m_time_label->SetLabel(_("Date and Time: ") + "--");
   }
 
-  if (!isPlaying && isAtEnd) UpdatePlaybackStatus(_("Stopped"));
+  if (!is_playing && is_at_end) UpdatePlaybackStatus(_("Stopped"));
   Layout();
 }
 
 void VDRControl::UpdateFileLabel(const wxString& filename) {
   if (filename.IsEmpty()) {
-    m_fileLabel->SetLabel(_("No file loaded"));
+    m_file_label->SetLabel(_("No file loaded"));
   } else {
     wxFileName fn(filename);
-    m_fileLabel->SetLabel(fn.GetFullName());
+    m_file_label->SetLabel(fn.GetFullName());
   }
-  m_fileLabel->GetParent()->Layout();
+  m_file_label->GetParent()->Layout();
 }
 
 void VDRControl::StartPlayback() {
@@ -412,17 +413,17 @@ void VDRControl::OnSpeedSliderUpdated(wxCommandEvent& event) {
 
 void VDRControl::SetProgress(double fraction) {
   // Update slider position (0-1000 range)
-  int sliderPos = wxRound(fraction * 1000);
-  m_progressSlider->SetValue(sliderPos);
+  int slider_pos = wxRound(fraction * 1000);
+  m_progress_slider->SetValue(slider_pos);
 
   if (m_pvdr->GetFirstTimestamp().IsValid() &&
       m_pvdr->GetLastTimestamp().IsValid()) {
     // Calculate and set current timestamp based on the fraction
-    wxTimeSpan totalSpan =
+    wxTimeSpan total_span =
         m_pvdr->GetLastTimestamp() - m_pvdr->GetFirstTimestamp();
-    wxTimeSpan currentSpan =
-        wxTimeSpan::Seconds((totalSpan.GetSeconds().ToDouble() * fraction));
-    m_pvdr->SetCurrentTimestamp(m_pvdr->GetFirstTimestamp() + currentSpan);
+    wxTimeSpan current_span =
+        wxTimeSpan::Seconds((total_span.GetSeconds().ToDouble() * fraction));
+    m_pvdr->SetCurrentTimestamp(m_pvdr->GetFirstTimestamp() + current_span);
 
     // Update time display
     UpdateTimeLabel();
@@ -438,19 +439,19 @@ void VDRControl::SetColorScheme(PI_ColorScheme cs) {
 }
 
 void VDRControl::UpdateFileStatus(const wxString& status) {
-  if (m_fileStatusLabel) {
-    m_fileStatusLabel->SetLabel(status);
+  if (m_file_status_lbl) {
+    m_file_status_lbl->SetLabel(status);
   }
 }
 
 void VDRControl::UpdateNetworkStatus(const wxString& status) {
-  if (m_networkStatusLabel) {
-    m_networkStatusLabel->SetLabel(status);
+  if (m_network_status_lbl) {
+    m_network_status_lbl->SetLabel(status);
   }
 }
 
 void VDRControl::UpdatePlaybackStatus(const wxString& status) {
-  if (m_playbackStatusLabel) {
-    m_playbackStatusLabel->SetLabel(status);
+  if (m_playback_status_lbl) {
+    m_playback_status_lbl->SetLabel(status);
   }
 }

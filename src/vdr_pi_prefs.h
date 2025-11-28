@@ -22,8 +22,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  **************************************************************************/
 
-#ifndef _VDR_PI_PREFS_H_
-#define _VDR_PI_PREFS_H_
+#ifndef VDR_PI_PREFS_H_
+#define VDR_PI_PREFS_H_
 
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
@@ -60,38 +60,46 @@ public:
    * @param stopDelay Minutes to wait before stopping
    * @param protocols Active protocol settings
    */
-  VDRPrefsDialog(wxWindow* parent, wxWindowID id, VDRDataFormat format,
+  VDRPrefsDialog(wxWindow* parent, wxWindowID id, VdrDataFormat format,
                  const wxString& recordingDir, bool logRotate,
                  int logRotateInterval, bool autoStartRecording,
                  bool useSpeedThreshold, double speedThreshold, int stopDelay,
-                 const VDRProtocolSettings& protocols);
+                 const VdrProtocolSettings& protocols);
 
   /** Get selected data format setting. */
-  VDRDataFormat GetDataFormat() const { return m_format; }
+  [[nodiscard]] VdrDataFormat GetDataFormat() const { return m_format; }
 
   /** Get configured recording directory path. */
-  wxString GetRecordingDir() const { return m_recording_dir; }
+  [[nodiscard]] wxString GetRecordingDir() const { return m_recording_dir; }
 
   /** Check if log rotation is enabled. */
-  bool GetLogRotate() const { return m_log_rotate; }
+  [[nodiscard]] bool GetLogRotate() const { return m_log_rotate; }
 
   /** Get log rotation interval in hours. */
-  int GetLogRotateInterval() const { return m_log_rotate_interval; }
+  [[nodiscard]] int GetLogRotateInterval() const {
+    return m_log_rotate_interval;
+  }
 
   /** Check if auto-start recording is enabled. */
-  bool GetAutoStartRecording() const { return m_auto_start_recording; }
+  [[nodiscard]] bool GetAutoStartRecording() const {
+    return m_auto_start_recording;
+  }
 
   /** Check if speed threshold is enabled. */
-  bool GetUseSpeedThreshold() const { return m_use_speed_threshold; }
+  [[nodiscard]] bool GetUseSpeedThreshold() const {
+    return m_use_speed_threshold;
+  }
 
   /** Get speed threshold in knots. */
-  double GetSpeedThreshold() const { return m_speed_threshold; }
+  [[nodiscard]] double GetSpeedThreshold() const { return m_speed_threshold; }
 
   /** Get recording stop delay in minutes. */
-  int GetStopDelay() const { return m_stop_delay; }
+  [[nodiscard]] int GetStopDelay() const { return m_stop_delay; }
 
   /** Get protocol recording settings. */
-  VDRProtocolSettings GetProtocolSettings() const { return m_protocols; }
+  [[nodiscard]] VdrProtocolSettings GetProtocolSettings() const {
+    return m_protocols;
+  }
 
 private:
   /** Handle OK button click. */
@@ -127,40 +135,40 @@ private:
   wxPanel* CreateReplayTab(wxWindow* parent);
 
   // Recording tab controls
-  wxRadioButton* m_nmeaRadio;           //!< Raw NMEA format selection
-  wxRadioButton* m_csvRadio;            //!< CSV format selection
-  wxTextCtrl* m_dirCtrl;                //!< Recording directory display
-  wxButton* m_dirButton;                //!< Directory selection button
-  wxCheckBox* m_logRotateCheck;         //!< Enable log rotation
-  wxSpinCtrl* m_logRotateIntervalCtrl;  //!< Hours between rotations
+  wxRadioButton* m_nmea_radio;             //!< Raw NMEA format selection
+  wxRadioButton* m_csv_radio;              //!< CSV format selection
+  wxTextCtrl* m_dir_ctrl;                  //!< Recording directory display
+  wxButton* m_dir_button;                  //!< Directory selection button
+  wxCheckBox* m_log_rotate_check;          //!< Enable log rotation
+  wxSpinCtrl* m_log_rotate_interval_ctrl;  //!< Hours between rotations
 
   // Auto record settings
-  wxCheckBox* m_autoStartRecordingCheck;   //!< Enable auto-start recording
-  wxCheckBox* m_useSpeedThresholdCheck;    //!< Enable speed threshold
-  wxSpinCtrlDouble* m_speedThresholdCtrl;  //!< Speed threshold value
-  wxSpinCtrl* m_stopDelayCtrl;             //!< Minutes before stop
+  wxCheckBox* m_autoStartRecordingCheck;     //!< Enable auto-start recording
+  wxCheckBox* m_use_speed_threshold_check;   //!< Enable speed threshold
+  wxSpinCtrlDouble* m_speed_threshold_ctrl;  //!< Speed threshold value
+  wxSpinCtrl* m_stop_delay_ctrl;             //!< Minutes before stop
 
   // Protocol selection
-  wxCheckBox* m_nmea0183Check;  //!< Enable NMEA 0183 recording
-  wxCheckBox* m_nmea2000Check;  //!< Enable NMEA 2000 recording
+  wxCheckBox* m_nmea0183_check;  //!< Enable NMEA 0183 recording
+  wxCheckBox* m_nmea2000_check;  //!< Enable NMEA 2000 recording
 #if 0
    wxCheckBox* m_signalKCheck;      //!< Enable Signal K recording
 #endif
 
   // Replay tab controls
   // NMEA 0183 replay mode
-  wxRadioButton* m_nmea0183NetworkRadio;
-  wxRadioButton* m_nmea0183InternalRadio;
-  wxRadioButton* m_nmea0183LoopbackRadio;
+  wxRadioButton* m_nmea0183_network_radio;
+  wxRadioButton* m_nmea0183_internal_radio;
+  wxRadioButton* m_nmea0183_loopback_radio;
 
   // Network selection
-  ConnectionSettingsPanel* m_nmea0183NetPanel;
-  ConnectionSettingsPanel* m_nmea2000NetPanel;
+  ConnectionSettingsPanel* m_nmea0183_net_panel;
+  ConnectionSettingsPanel* m_nmea2000_net_panel;
 #if 0
   ConnectionSettingsPanel* m_signalKNetPanel;
 #endif
 
-  VDRDataFormat m_format;       //!< Selected data format
+  VdrDataFormat m_format;       //!< Selected data format
   wxString m_recording_dir;     //!< Selected recording directory
   bool m_log_rotate;            //!< Log rotation enabled
   int m_log_rotate_interval;    //!< Hours between rotations
@@ -169,7 +177,7 @@ private:
   double m_speed_threshold;     //!< Speed threshold in knots
   int m_stop_delay;             //!< Minutes before stopping
 
-  VDRProtocolSettings m_protocols;  //!< Protocol selection settings
+  VdrProtocolSettings m_protocols;  //!< Protocol selection settings
 
   DECLARE_EVENT_TABLE()
 };

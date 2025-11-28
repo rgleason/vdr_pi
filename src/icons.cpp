@@ -12,65 +12,61 @@
 #include "ocpn_plugin.h"
 #include "icons.h"
 
-// wxString _svg_vdr_pi;
-wxString _svg_vdr;
-wxString _svg_vdr_play;
-wxString _svg_vdr_record;
-wxString _svg_record_toggled;
-wxString _svg_record_rollover;
-wxString _svg_play_toggled;
-wxString _svg_play_rollover;
+wxString g_svg_vdr;
+wxString g_svg_vdr_play;
+wxString g_svg_vdr_record;
+wxString g_svg_record_toggled;
+wxString g_svg_record_rollover;
+wxString g_svg_play_toggled;
+wxString g_svg_play_rollover;
 
-wxString _svg_settings;
-wxString _svg_file_open;
-wxString _svg_play_circle;
-wxString _svg_pause_circle;
-wxString _svg_stop_circle;
+wxString g_svg_settings;
+wxString g_svg_file_open;
+wxString g_svg_play_circle;
+wxString g_svg_pause_circle;
+wxString g_svg_stop_circle;
 
-void initialize_images(void) {
+void InitializeImages() {
+  wxString tmp_path = GetPluginDataDir("vdr_pi");
   wxFileName fn;
-  wxString tmp_path;
-  tmp_path = GetPluginDataDir("vdr_pi");
   fn.SetPath(tmp_path);
   fn.AppendDir("data");
 
   fn.SetFullName("vdr_pi.svg");
-  _svg_vdr = fn.GetFullPath();
+  g_svg_vdr = fn.GetFullPath();
 
   fn.SetFullName("vdr_play.svg");
-  _svg_vdr_play = fn.GetFullPath();
+  g_svg_vdr_play = fn.GetFullPath();
 
   fn.SetFullName("vdr_record.svg");
-  _svg_vdr_record = fn.GetFullPath();
+  g_svg_vdr_record = fn.GetFullPath();
 
   fn.SetFullName("vdr_play_rollover.svg");
-  _svg_play_rollover = fn.GetFullPath();
+  g_svg_play_rollover = fn.GetFullPath();
 
   fn.SetFullName("vdr_play_toggled.svg");
-  _svg_play_toggled = fn.GetFullPath();
+  g_svg_play_toggled = fn.GetFullPath();
 
   fn.SetFullName("vdr_record_rollover.svg");
-  _svg_record_rollover = fn.GetFullPath();
+  g_svg_record_rollover = fn.GetFullPath();
 
   fn.SetFullName("vdr_record_toggled.svg");
-  _svg_record_toggled = fn.GetFullPath();
+  g_svg_record_toggled = fn.GetFullPath();
 
   fn.SetFullName("vdr_settings.svg");
-  _svg_settings = fn.GetFullPath();
+  g_svg_settings = fn.GetFullPath();
 
   fn.SetFullName("vdr_file_open.svg");
-  _svg_file_open = fn.GetFullPath();
+  g_svg_file_open = fn.GetFullPath();
 
   fn.SetFullName("vdr_play_circle.svg");
-  _svg_play_circle = fn.GetFullPath();
+  g_svg_play_circle = fn.GetFullPath();
 
   fn.SetFullName("vdr_pause_circle.svg");
-  _svg_pause_circle = fn.GetFullPath();
+  g_svg_pause_circle = fn.GetFullPath();
 
   fn.SetFullName("vdr_stop_circle.svg");
-  _svg_stop_circle = fn.GetFullPath();
+  g_svg_stop_circle = fn.GetFullPath();
 
-  wxLogMessage("Loading toolbar icon: " + _svg_record_toggled);
-
-  return;
+  wxLogMessage("Loading toolbar icon: " + g_svg_record_toggled);
 }
