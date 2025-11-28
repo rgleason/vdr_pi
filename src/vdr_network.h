@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  **************************************************************************/
 
-#ifndef _VDR_NETWORK_H_
-#define _VDR_NETWORK_H_
+#ifndef VDR_NETWORK_H_
+#define VDR_NETWORK_H_
 
 #include <wx/wx.h>
 #include <wx/socket.h>
@@ -44,7 +44,7 @@ public:
   VDRNetworkServer();
 
   /** Destructor ensures proper cleanup of sockets. */
-  ~VDRNetworkServer();
+  ~VDRNetworkServer() override;
 
   /**
    * Start the network server.
@@ -83,13 +83,13 @@ public:
   bool SendBinary(const void* data, size_t length);
 
   /** Check if server is currently running. */
-  bool IsRunning() const { return m_running; }
+  [[nodiscard]] bool IsRunning() const { return m_running; }
 
   /** Get current protocol (TCP/UDP). */
-  bool IsTCP() const { return m_useTCP; }
+  [[nodiscard]] bool IsTCP() const { return m_useTCP; }
 
   /** Get current port number. */
-  int GetPort() const { return m_port; }
+  [[nodiscard]] int GetPort() const { return m_port; }
 
 private:
   /** Handle incoming TCP socket events. */
@@ -118,9 +118,9 @@ private:
   bool m_useTCP;                            //!< Current protocol
   int m_port;                               //!< Current port
 
-  static const int DEFAULT_PORT = 10111;  //!< Default NMEA port
+  static constexpr int kDefaultPort = 10111;  //!< Default NMEA port
 
   DECLARE_EVENT_TABLE()
 };
 
-#endif  // _VDR_NETWORK_H_
+#endif  // VDR_NETWORK_H_

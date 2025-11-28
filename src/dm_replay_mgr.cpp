@@ -25,6 +25,7 @@
 #include <cassert>
 #include <cctype>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 
 #include "dm_replay_mgr.h"
@@ -35,7 +36,7 @@ using namespace std::chrono_literals;
 
 static constexpr auto kEpoch = ReplayTimepoint{};  ///< 1/1 1970
 
-static constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
+// static constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
 
 static const char* const kNoDriverMessage =
     _(R"(I cannot find any loopback driver and is thus unable
@@ -44,7 +45,7 @@ is older than 5.14 -- such versions cannot be used to
 replay VDR data.)");
 
 /** Return true if dh refers to a loopback driver */
-static bool IsLoopbackDriver(DriverHandle dh) {
+static bool IsLoopbackDriver(const DriverHandle& dh) {
   auto attr = GetAttributes(dh);
   auto found = attr.find("protocol");
   return found != attr.end() && attr["protocol"] == "loopback";
@@ -56,7 +57,7 @@ static std::vector<DriverHandle> GetLoopbackDriver() {
   auto handles = GetActiveDrivers();
   auto handle =
       std::find_if(handles.begin(), handles.end(),
-                   [](DriverHandle dh) { return IsLoopbackDriver(dh); });
+                   [](const DriverHandle& dh) { return IsLoopbackDriver(dh); });
   if (handle != handles.end()) rv.push_back(*handle);
   return rv;
 }
@@ -65,7 +66,7 @@ static ReplayTimepoint ParseTimeStamp(const std::string& stamp) {
   const char* const format = "%a %b %d %H:%M:%S %Y";
   std::istringstream is(stamp);
   is.imbue(std::locale("en_US.utf-8"));
-  std::tm tm;
+  std::tm tm{0};
   is >> std::get_time(&tm, format);
   return ReplayClock::from_time_t(std::mktime(&tm));
 }
@@ -77,7 +78,7 @@ static ReplayTimepoint ParseTimeStamp(const std::string& stamp) {
  */
 class DataMonitorReplayMgr::FilteredByteSource : public io::ByteSourceBase {
 public:
-  FilteredByteSource(const std::string& path) : m_stream(path) {}
+  explicit FilteredByteSource(const std::string& path) : m_stream(path) {}
   ~FilteredByteSource() override = default;
 
   int read(char* returned, int scount) override {
@@ -91,10 +92,10 @@ public:
       if (line[0] == '#') continue;
       m_buff.append(line + "\n");
     }
-    std::streamsize length = std::min(count, m_buff.size());
+    auto length = static_cast<std::streamsize>(std::min(count, m_buff.size()));
     std::memcpy(returned, m_buff.c_str(), length);
     m_buff = m_buff.substr(length);
-    return length;
+    return static_cast<int>(length);
   }
 
 private:
@@ -102,7 +103,7 @@ private:
   std::ifstream m_stream;
 };
 
-DataMonitorReplayMgr::Log::Log(const std::string& path) {
+DataMonitorReplayMgr::Log::Log(const std::string& path) : read_bytes(0) {
   std::ifstream stream(path);
   if (!stream.good()) {
     file_size = 0;
@@ -129,7 +130,7 @@ DataMonitorReplayMgr::DataMonitorReplayMgr(
       m_csv_reader(path, std::make_unique<FilteredByteSource>(path)),
       m_update_controls(std::move(update_controls)),
       m_vdr_message(std::move(vdr_message)) {
-  if (path == "") return;
+  if (path.empty()) return;
 
   try {
     m_csv_reader.read_header(io::ignore_extra_column, "received_at", "protocol",
@@ -151,7 +152,7 @@ DataMonitorReplayMgr::~DataMonitorReplayMgr() = default;
 void DataMonitorReplayMgr::HandleRow(const std::string& protocol,
                                      const std::string& msg_type,
                                      const std::string& source,
-                                     const std::string& raw_data) {
+                                     const std::string& raw_data) const {
   std::stringstream ss;
   if (protocol == "NMEA2000")
     ss << "nmea2000 " << source << " " << msg_type << " " << raw_data;
@@ -198,11 +199,11 @@ int DataMonitorReplayMgr::Notify() {
   }
   if (m_state == State::kIdle) m_state = State::kPlaying;
   std::chrono::milliseconds delay = ComputeDelay(received_at, m_log);
-  return delay.count();
+  return static_cast<int>(delay.count());
 }
 
 std::chrono::milliseconds DataMonitorReplayMgr::ComputeDelay(
-    const std::string& received_at, Log& log) {
+    const std::string& received_at, Log& log) const {
   using namespace std::chrono;
   constexpr auto kDefaultDelay = 100ms;
 

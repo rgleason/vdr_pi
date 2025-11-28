@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  **************************************************************************/
 
-#ifndef _VDR_PI_CONTROL_H_
-#define _VDR_PI_CONTROL_H_
+#ifndef VDR_PI_CONTROL_H_
+#define VDR_PI_CONTROL_H_
 
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
@@ -27,7 +27,7 @@
 
 #include "ocpn_plugin.h"
 
-class vdr_pi;
+class VdrPi;
 
 /**
  * UI control panel for VDR playback functionality.
@@ -45,7 +45,7 @@ public:
    * @param id Window identifier
    * @param vdr Owner VDR plugin instance
    */
-  VDRControl(wxWindow* pparent, wxWindowID id, vdr_pi* vdr);
+  VDRControl(wxWindow* pparent, wxWindowID id, VdrPi* vdr);
 
   /**
    * Update UI elements for color scheme changes.
@@ -72,7 +72,9 @@ public:
   void UpdateTimeLabel();
 
   /** Get current playback speed multiplier setting. */
-  int GetSpeedMultiplier() const { return m_speedSlider->GetValue(); }
+  [[nodiscard]] int GetSpeedMultiplier() const {
+    return m_speed_slider->GetValue();
+  }
 
   /** Set the speed multiplier settting. */
   void SetSpeedMultiplier(int value);
@@ -90,7 +92,7 @@ public:
    */
   void UpdatePlaybackStatus(const wxString& status);
 
-  void EnableSpeedSlider(bool enable) { m_speedSlider->Enable(enable); }
+  void EnableSpeedSlider(bool enable) { m_speed_slider->Enable(enable); }
 
 private:
   /** Create and layout UI controls. */
@@ -152,32 +154,32 @@ private:
    */
   void StopPlayback();
 
-  bool LoadFile(wxString currentFile);
+  bool LoadFile(wxString current_file);
 
-  wxButton* m_loadBtn;         //!< Button to load VDR file
-  wxButton* m_settingsBtn;     //!< Button to open settings dialog
-  wxButton* m_playPauseBtn;    //!< Toggle button for play/pause
-  wxString m_playBtnTooltip;   //!< Tooltip text for play state
-  wxString m_pauseBtnTooltip;  //!< Tooltip text for pause state
-  wxString m_stopBtnTooltip;   //!< Tooltip text for stop state
+  wxButton* m_load_btn;          //!< Button to load VDR file
+  wxButton* m_settings_btn;      //!< Button to open settings dialog
+  wxButton* m_play_pause_btn;    //!< Toggle button for play/pause
+  wxString m_play_btn_tooltip;   //!< Tooltip text for play state
+  wxString m_pause_btn_tooltip;  //!< Tooltip text for pause state
+  wxString m_stop_btn_tooltip;   //!< Tooltip text for stop state
 
-  wxSlider* m_speedSlider;     //!< Slider control for playback speed
-  wxSlider* m_progressSlider;  //!< Slider control for playback position
-  wxStaticText* m_fileLabel;   //!< Label showing current filename
-  wxStaticText* m_timeLabel;   //!< Label showing current timestamp
-  vdr_pi* m_pvdr;              //!< Owner plugin instance
+  wxSlider* m_speed_slider;     //!< Slider control for playback speed
+  wxSlider* m_progress_slider;  //!< Slider control for playback position
+  wxStaticText* m_file_label;   //!< Label showing current filename
+  wxStaticText* m_time_label;   //!< Label showing current timestamp
+  VdrPi* m_pvdr;                //!< Owner plugin instance
 
-  bool m_isDragging;            //!< Flag indicating progress slider drag
-  bool m_wasPlayingBeforeDrag;  //!< Playback state before drag started
+  bool m_is_dragging;              //!< Flag indicating progress slider drag
+  bool m_was_playing_before_drag;  //!< Playback state before drag started
 
   // Status labels
-  wxStaticText* m_fileStatusLabel;      //!< Label showing file status.
-  wxStaticText* m_networkStatusLabel;   //!< Label showing network status.
-  wxStaticText* m_playbackStatusLabel;  //!< Label showing playback status.
+  wxStaticText* m_file_status_lbl;      //!< Label showing file status.
+  wxStaticText* m_network_status_lbl;   //!< Label showing network status.
+  wxStaticText* m_playback_status_lbl;  //!< Label showing playback status.
 
-  int m_buttonSize;  //!< Size of SVG button icons.
+  int m_button_size;  //!< Size of SVG button icons.
 
   DECLARE_EVENT_TABLE()
 };
 
-#endif  // _VDR_PI_CONTROL_H_
+#endif  // VDR_PI_CONTROL_H_

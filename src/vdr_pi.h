@@ -26,8 +26,8 @@
  ***************************************************************************
  */
 
-#ifndef _VDRPI_H_
-#define _VDRPI_H_
+#ifndef VDRPI_H_
+#define VDRPI_H_
 
 #include <deque>
 #include <map>
@@ -37,13 +37,13 @@
 
 #ifndef WX_PRECOMP
 #include "wx/wx.h"
-#endif  // precompiled headers
+#endif
 
 #include <wx/fileconf.h>
 #include <wx/filepicker.h>
 #include <wx/file.h>
 #include <wx/aui/aui.h>
-#include <wx/radiobut.h>
+#include <wx/string.h>
 
 #include "ocpn_plugin.h"
 #include "vdr_pi_time.h"
@@ -51,7 +51,10 @@
 #include "config.h"
 #include "dm_replay_mgr.h"
 
-#define VDR_TOOL_POSITION -1  // Request default positioning of toolbar tool
+#include <string>
+
+// Request default positioning of toolbar tool
+static constexpr int kVdrToolPosition = -1;
 
 //----------------------------------------------------------------------------------------------------------
 //    The PlugIn Class Definition
@@ -65,16 +68,16 @@ class VDRControl;
  * Controls how data is structured and stored in VDR files. Each format offers
  * different capabilities for data organization and playback control.
  */
-enum class VDRDataFormat {
-  RawNMEA,  //!< Raw NMEA sentences stored unmodified
-  CSV,  //!< Structured CSV format with timestamps and message type metadata.
-        // Future formats can be added here
+enum class VdrDataFormat {
+  kRawNmea,  //!< Raw NMEA sentences stored unmodified
+  kCsv,  //!< Structured CSV format with timestamps and message type metadata.
+         // Future formats can be added here
 };
 
-enum class NMEA0183ReplayMode {
-  NETWORK,       // Use network connection
-  INTERNAL_API,  // Use PushNMEABuffer()
-  LOOPBACK       // Use WriteCommDriver() on loopback driver
+enum class ReplayMode {
+  kNetwork,      // Use network connection
+  kInternalApi,  // Use PushNMEABuffer()
+  kLoopback      // Use WriteCommDriver() on loopback driver
 };
 
 /**
@@ -82,10 +85,10 @@ enum class NMEA0183ReplayMode {
  */
 struct ConnectionSettings {
   bool enabled;  //!< Enable network output
-  bool useTCP;   //!< Use TCP (true) or UDP (false)
+  bool use_tcp;  //!< Use TCP (true) or UDP (false)
   int port;      //!< Network port number
 
-  ConnectionSettings() : enabled(false), useTCP(true), port(10111) {}
+  ConnectionSettings() : enabled(false), use_tcp(true), port(10111) {}
 };
 
 /**
@@ -94,21 +97,22 @@ struct ConnectionSettings {
  * Controls which maritime data protocols are captured during recording.
  * Multiple protocols can be enabled simultaneously.
  */
-struct VDRProtocolSettings {
+struct VdrProtocolSettings {
   bool nmea0183;                   //!< Enable NMEA 0183 sentence recording
   bool nmea2000;                   //!< Enable NMEA 2000 PGN message recording
   bool signalK;                    //!< Enable Signal K data recording
   ConnectionSettings nmea0183Net;  //!< NMEA 0183 connection settings
   ConnectionSettings n2kNet;       //!< NMEA 2000 connection settings
-  ConnectionSettings signalKNet;   //!< Signal K connection settings
+  ConnectionSettings signalkNet;   //!< Signal K connection settings
 
-  NMEA0183ReplayMode nmea0183ReplayMode;
+  ReplayMode replay_mode;
 
-  VDRProtocolSettings()
+  VdrProtocolSettings()
       : nmea0183(true),
         nmea2000(false),
-        signalK(false) /**,
-nmea0183ReplayMode(NMEA0183ReplayMode::INTERNAL_API) */
+        signalK(false),
+        replay_mode(ReplayMode::kInternalApi)
+  // nmea0183ReplayMode(NMEA0183ReplayMode::INTERNAL_API)
   {}
 };
 
@@ -134,15 +138,15 @@ wxDECLARE_EVENT(EVT_SIGNALK, ObservedEvt);
  * files for later playback. Supports automatic recording based on vessel speed
  * and automatic file rotation for data management.
  */
-class vdr_pi : public opencpn_plugin_118 {
+class VdrPi : public opencpn_plugin_118 {
 public:
   /** Creates a new VDR plugin instance. */
-  vdr_pi(void* ppimgr);
+  explicit VdrPi(void* ppimgr);
 
   /** Initializes the plugin and sets up toolbar items. */
-  int Init(void);
+  int Init() override;
   /** Cleans up resources and saves configuration. */
-  bool DeInit(void);
+  bool DeInit() override;
 
   int GetAPIVersionMajor() override;
   int GetAPIVersionMinor() override;
@@ -152,10 +156,10 @@ public:
   int GetPlugInVersionPost() override;
   const char* GetPlugInVersionPre() override;
   const char* GetPlugInVersionBuild() override;
-  wxBitmap* GetPlugInBitmap();
+  wxBitmap* GetPlugInBitmap() override;
   wxString GetCommonName() override;
-  wxString GetShortDescription();
-  wxString GetLongDescription();
+  wxString GetShortDescription() override;
+  wxString GetLongDescription() override;
 
   /**
    * Process timer notification for playback events.
@@ -177,23 +181,23 @@ public:
    * For RMC sentences, also processes vessel speed for auto-recording.
    * @param sentence NMEA sentence to process
    */
-  void SetNMEASentence(wxString& sentence);
+  void SetNMEASentence(wxString& sentence) override;
   /**
    * Process an incoming AIS message for recording.
    *
    * Records AIS messages similarly to NMEA sentences if recording is active.
    * @param sentence AIS message to process
    */
-  void SetAISSentence(wxString& sentence);
+  void SetAISSentence(wxString& sentence) override;
   /**
    * Get number of toolbar items added by plugin.
    * @return Number of toolbar items
    */
-  int GetToolbarToolCount(void);
+  int GetToolbarToolCount() override;
   /** Handle toolbar button clicks. */
-  void OnToolbarToolCallback(int id);
+  void OnToolbarToolCallback(int id) override;
   /** Update the plugin's color scheme .*/
-  void SetColorScheme(PI_ColorScheme cs);
+  void SetColorScheme(PI_ColorScheme cs) override;
 
   /** Load a VDR file containing NMEA data, either in raw NMEA format or CSV. */
   bool LoadFile(const wxString& filename, wxString* error = nullptr);
@@ -212,9 +216,9 @@ public:
   /** Stop playback of VDR data. */
   void StopPlayback();
   /** Return whether recording is currently active. */
-  bool IsRecording() { return m_recording; }
+  bool IsRecording() const { return m_recording; }
   /** Return whether recording is currently paused. */
-  bool IsRecordingPaused() { return m_recording_paused; }
+  bool IsRecordingPaused() const { return m_recording_paused; }
   /** Return whether playback is currently active. */
   bool IsPlaying() const;
   /** Return whether the end of the playback file has been reached. */
@@ -223,7 +227,7 @@ public:
   /** Return true if blocking error encountered. */
   bool IsError() const;
 
-  void ResetEndOfFile() { m_atFileEnd = false; }
+  void ResetEndOfFile() { m_at_file_end = false; }
   /**
    * Calculate when the current NMEA/SignalK message should be played during
    * replay.
@@ -235,7 +239,7 @@ public:
    * The calculation works by:
    * 1. Finding how much time elapsed between the first message and current
    * message
-   * 2. Scaling this elapsed time based on the playback speed (e.g. half time at
+   * 2. Scaling this elapsed time based on the playback speed (e.g. half-time at
    * 2x speed)
    * 3. Adding the scaled time to when playback started
    *
@@ -250,10 +254,10 @@ public:
   void OnTimer(wxTimerEvent& event);
 
   /** Show the plugin preferences dialog. */
-  void ShowPreferencesDialog(wxWindow* parent);
+  void ShowPreferencesDialog(wxWindow* parent) override;
   void ShowPreferencesDialogNative(wxWindow* parent);
   /** Get current data format setting for VDR output */
-  VDRDataFormat GetDataFormat() const { return m_data_format; }
+  VdrDataFormat GetDataFormat() const { return m_data_format; }
   /**
    * Set data format for VDR recording.
    *
@@ -261,7 +265,7 @@ public:
    * updated format.
    * @param dataFormat New format to use for recording.
    */
-  void SetDataFormat(VDRDataFormat dataFormat);
+  void SetDataFormat(VdrDataFormat dataFormat);
   /** Get configured recording directory. */
   wxString GetRecordingDir() const { return m_recording_dir; }
   /**
@@ -308,11 +312,11 @@ public:
    * Analyzes file to determine if it contains valid timestamps and stores
    * first/last timestamps if found. Required for proper playback timing.
    *
-   * @param hasValidTimestamps True if valid timestamps found in file
+   * @param has_valid_timestamps True if valid timestamps found in file
    * @param error Error message if an error occurs during scan.
    * @return True if scan completed successfully, false if error occurred.
    */
-  bool ScanFileTimestamps(bool& hasValidTimestamps, wxString& error);
+  bool ScanFileTimestamps(bool& has_valid_timestamps, wxString& error);
   /**
    * Seek playback position to specified fraction of file.
    *
@@ -326,14 +330,14 @@ public:
    * Get current playback position as fraction of total.
    *
    * For files with timestamps, based on timestamp position.
-   * For files without timestamps, based on line position.
+   * For files without timestamps, based online position.
    * @return Position as fraction between 0-1
    */
   double GetProgressFraction() const;
   /** Get timestamp of first message in file. */
-  wxDateTime GetFirstTimestamp() const { return m_firstTimestamp; }
+  wxDateTime GetFirstTimestamp() const { return m_first_timestamp; }
   /** Get timestamp of last message in file. */
-  wxDateTime GetLastTimestamp() const { return m_lastTimestamp; }
+  wxDateTime GetLastTimestamp() const { return m_last_timestamp; }
   /** Get timestamp at current playback position. */
   wxDateTime GetCurrentTimestamp() const;
   /**
@@ -341,7 +345,7 @@ public:
    * @param timestamp New current timestamp
    */
   void SetCurrentTimestamp(const wxDateTime& timestamp) {
-    m_currentTimestamp = timestamp;
+    m_current_timestamp = timestamp;
   }
   /**
    * Get path of currently loaded input file.
@@ -405,8 +409,8 @@ public:
   bool HasValidTimestamps() const;
 
   /** Helper function to extract NMEA sentence components. */
-  bool ParseNMEAComponents(const wxString nmea, wxString& talkerId,
-                           wxString& sentenceId, bool& hasTimestamp) const;
+  static bool ParseNmeaComponents(wxString nmea, wxString& talkerId,
+                                  wxString& sentence_id, bool& hasTimestamp);
 
   /** Helper to flush the sentence buffer to NMEA stream. */
   void FlushSentenceBuffer();
@@ -431,7 +435,7 @@ public:
    */
   const std::unordered_map<TimeSource, TimeSourceDetails, TimeSourceHash>&
   GetTimeSources() const {
-    return m_timeSources;
+    return m_time_sources;
   }
 
   /**
@@ -464,27 +468,27 @@ public:
   bool PlaybackMessage(const wxString& protocol, const wxString& message);
 
   bool IsUsingLoopback() const {
-    return m_protocols.nmea0183ReplayMode == NMEA0183ReplayMode::LOOPBACK;
+    return m_protocols.replay_mode == ReplayMode::kLoopback;
   }
 
 private:
-  class TimerHandler : public wxTimer {
+  class VdrTimer : public wxTimer {
   public:
-    TimerHandler(vdr_pi* plugin) : m_plugin(plugin) {}
-    void Notify() { m_plugin->Notify(); }
+    explicit VdrTimer(VdrPi* plugin) : m_plugin(plugin) {}
+    void Notify() override { m_plugin->Notify(); }
 
   private:
-    vdr_pi* m_plugin;
+    VdrPi* m_plugin;
   };
-  bool LoadConfig(void);
-  bool SaveConfig(void);
-  wxString FormatNMEA0183AsCSV(const wxString& nmea);
+  bool LoadConfig();
+  bool SaveConfig();
+  static wxString FormatNmea0183AsCsv(const wxString& nmea);
   bool ParseCSVHeader(const wxString& header);
   /** Parse timestamp from a CSV line or raw NMEA sentence. */
   bool ParseCSVLineTimestamp(const wxString& line, wxString* messages,
                              wxDateTime* timestamp);
   /** Return true if the message is a NMEA0183 or AIS message */
-  bool IsNMEA0183OrAIS(const wxString& message);
+  static bool IsNmea0183OrAis(const wxString& message);
   /** Update SignalK event listeners when preferences are changed. */
   void UpdateSignalKListeners();
   /** Update NMEA 2000 event listeners when preferences are changed. */
@@ -587,8 +591,8 @@ private:
    */
   void HandleNetworkPlayback(const wxString& data);
 
-  /** Handle message callback from dm_replay_mgr et al.. */
-  void OnVdrMsg(VdrMsgType type, const std::string msg);
+  /** Handle message callback from dm_replay_mgr et al. */
+  static void OnVdrMsg(VdrMsgType type, std::string msg);
 
   std::unique_ptr<DataMonitorReplayMgr> DmReplayMgrFactory();
 
@@ -624,15 +628,15 @@ private:
   /** Flag indicating whether playback is active. */
   bool m_playing;
   /** Flag indicating whether end of file has been reached. */
-  bool m_atFileEnd;
+  bool m_at_file_end;
 
   /** Current data format used for recording and playback. */
-  VDRDataFormat m_data_format;
+  VdrDataFormat m_data_format;
   /** Active protocol recording settings. */
-  VDRProtocolSettings m_protocols;
+  VdrProtocolSettings m_protocols;
 
   /** Network servers for each protocol */
-  std::map<wxString, std::unique_ptr<VDRNetworkServer>> m_networkServers;
+  std::map<wxString, std::unique_ptr<VDRNetworkServer>> m_network_servers;
 
   /** Input file stream for playback. */
   wxTextFile m_istream;
@@ -688,11 +692,11 @@ private:
    * The first (earliest) timestamp from the primary time source in the VDR
    * file.
    */
-  wxDateTime m_firstTimestamp;
+  wxDateTime m_first_timestamp;
   /** The last timestamp from the primary time source in the VDR file. */
-  wxDateTime m_lastTimestamp;
+  wxDateTime m_last_timestamp;
   /** The current timestamp during VDR playback. */
-  wxDateTime m_currentTimestamp;
+  wxDateTime m_current_timestamp;
   /** Track whether file has valid timestamps. */
   bool m_has_timestamps;
 
@@ -738,7 +742,7 @@ private:
    * Maximum number of NMEA sentences to retain until messages are dropped
    * to maintain playback timing.
    */
-  static const int MAX_MSG_BUFFER_SIZE = 1000;
+  static constexpr int kMaxBufferSize = 1000;
   /**
    * Circular buffer for sentences.
    * Used to store incoming NMEA sentences for playback, especially
@@ -749,19 +753,19 @@ private:
   /** Flag indicating if messages have been dropped from the buffer. */
   bool m_messages_dropped;
 
-  wxEvtHandler* m_eventHandler;
-  TimerHandler* m_timer;
-  TimestampParser m_timestampParser;  //!< Helper for timestamp parsing
+  wxEvtHandler* m_event_handler;
+  VdrTimer* m_timer;
+  TimestampParser m_timestamp_parser;  //!< Helper for timestamp parsing
   /**
    * The set of time sources in the VDR recording.
    * Each time source is identified by its NMEA sentence type, talker ID and
    * precision.
    */
   std::unordered_map<TimeSource, TimeSourceDetails, TimeSourceHash>
-      m_timeSources;
+      m_time_sources;
   /** The primary time source in the VDR recording. */
-  TimeSource m_primaryTimeSource;
-  bool m_hasPrimaryTimeSource;
+  TimeSource m_primary_time_source;
+  bool m_has_primary_time_source;
 
 #ifdef __ANDROID__
   wxString m_temp_outfile;
