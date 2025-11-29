@@ -11,7 +11,6 @@ cmake-build-*
 plugins
 *.bat
 *.bak
-*.swp
 buildwin/*.7z
 *.user
 
