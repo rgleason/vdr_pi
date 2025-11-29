@@ -26,8 +26,8 @@
 #include <wx/dialog.h>
 #include <wx/spinctrl.h>
 
-#include "vdr_pi.h"
 #include "vdr_pi_prefs_net.h"
+#include "commons.h"
 
 /**
  * Preferences dialog for configuring VDR settings.
