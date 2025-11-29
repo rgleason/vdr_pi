@@ -16,6 +16,10 @@
  **************************************************************************/
 #include <cstdint>
 
+#include <wx/notebook.h>
+
+#include "ocpn_plugin.h"
+
 #include "vdr_pi_prefs_net.h"
 #include "vdr_pi_prefs.h"
 
