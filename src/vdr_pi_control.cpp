@@ -33,25 +33,21 @@ in VDR mode. You might want to adjust the Replay
 preferences to "Use loopback driver" to be able to
 play it.)");
 
-enum {
-  ID_VDR_LOAD = wxID_HIGHEST + 1,
-  ID_VDR_PLAY_PAUSE,
-  ID_VDR_DATA_FORMAT_RADIOBUTTON,
-  ID_VDR_SPEED_SLIDER,
-  ID_VDR_PROGRESS,
-  ID_VDR_SETTINGS
-};
+static const int kDataFormatRadioBtnId = wxWindow::NewControlId();
+static const int kLoadId = wxWindow::NewControlId();
+static const int kPlayPauseId = wxWindow::NewControlId();
+static const int kProgressId = wxWindow::NewControlId();
+static const int kSettingsId = wxWindow::NewControlId();
+static const int kSpeedSliderId = wxWindow::NewControlId();
 
 BEGIN_EVENT_TABLE(VDRControl, wxWindow)
-EVT_BUTTON(ID_VDR_LOAD, VDRControl::OnLoadButton)
-EVT_RADIOBUTTON(ID_VDR_DATA_FORMAT_RADIOBUTTON,
-                VDRControl::OnDataFormatRadioButton)
-EVT_BUTTON(ID_VDR_PLAY_PAUSE, VDRControl::OnPlayPauseButton)
-EVT_BUTTON(ID_VDR_SETTINGS, VDRControl::OnSettingsButton)
-EVT_SLIDER(ID_VDR_SPEED_SLIDER, VDRControl::OnSpeedSliderUpdated)
-EVT_COMMAND_SCROLL_THUMBTRACK(ID_VDR_PROGRESS,
-                              VDRControl::OnProgressSliderUpdated)
-EVT_COMMAND_SCROLL_THUMBRELEASE(ID_VDR_PROGRESS,
+EVT_BUTTON(kLoadId, VDRControl::OnLoadButton)
+EVT_RADIOBUTTON(kDataFormatRadioBtnId, VDRControl::OnDataFormatRadioButton)
+EVT_BUTTON(kPlayPauseId, VDRControl::OnPlayPauseButton)
+EVT_BUTTON(kSettingsId, VDRControl::OnSettingsButton)
+EVT_SLIDER(kSpeedSliderId, VDRControl::OnSpeedSliderUpdated)
+EVT_COMMAND_SCROLL_THUMBTRACK(kProgressId, VDRControl::OnProgressSliderUpdated)
+EVT_COMMAND_SCROLL_THUMBRELEASE(kProgressId,
                                 VDRControl::OnProgressSliderEndDrag)
 END_EVENT_TABLE()
 
@@ -127,7 +123,7 @@ void VDRControl::CreateControls() {
 
   // Settings button
   m_settings_btn = new wxBitmapButton(
-      this, ID_VDR_SETTINGS,
+      this, kSettingsId,
       GetBitmapFromSVGFile(g_svg_settings, svg_size, svg_size),
       wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
   m_settings_btn->SetToolTip(_("Settings"));
@@ -135,8 +131,7 @@ void VDRControl::CreateControls() {
 
   // Load button
   m_load_btn = new wxBitmapButton(
-      this, ID_VDR_LOAD,
-      GetBitmapFromSVGFile(g_svg_file_open, svg_size, svg_size),
+      this, kLoadId, GetBitmapFromSVGFile(g_svg_file_open, svg_size, svg_size),
       wxDefaultPosition, buttonDimension, wxBU_EXACTFIT);
   m_load_btn->SetToolTip(_("Load VDR File"));
   file_sizer->Add(m_load_btn, 0, wxALL, 2);
@@ -157,7 +152,7 @@ void VDRControl::CreateControls() {
   m_stop_btn_tooltip = _("End of File");
 
   m_play_pause_btn = new wxBitmapButton(
-      this, ID_VDR_PLAY_PAUSE,
+      this, kPlayPauseId,
       GetBitmapFromSVGFile(g_svg_play_circle, svg_size, svg_size),
       wxDefaultPosition, buttonDimension, wxBU_EXACTFIT);
   m_play_pause_btn->SetToolTip(m_play_btn_tooltip);
@@ -165,7 +160,7 @@ void VDRControl::CreateControls() {
 
   // Progress slider in the same row as play button
   m_progress_slider =
-      new wxSlider(this, ID_VDR_PROGRESS, 0, 0, 1000, wxDefaultPosition,
+      new wxSlider(this, kProgressId, 0, 0, 1000, wxDefaultPosition,
                    wxDefaultSize, wxSL_HORIZONTAL | wxSL_BOTTOM);
   control_sizer->Add(m_progress_slider, 1, wxALIGN_CENTER_VERTICAL, 0);
   main_sizer->Add(control_sizer, 0, wxEXPAND | wxALL, 4);
