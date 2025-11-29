@@ -19,34 +19,29 @@
 #include "vdr_pi_prefs_net.h"
 #include "vdr_pi_prefs.h"
 
-enum {
-  ID_VDR_DIR_BUTTON = wxID_HIGHEST + 1,
-  ID_VDR_LOG_ROTATE_CHECK,       // ID for log rotation checkbox
-  ID_VDR_AUTO_RECORD_CHECK,      // ID for auto recording checkbox
-  ID_USE_SPEED_THRESHOLD_CHECK,  // ID for speed threshold checkbox
-  ID_NMEA0183_CHECK,
-  ID_NMEA2000_CHECK,
-  ID_SIGNALK_CHECK,
-  ID_NMEA0183_NETWORK_RADIO,
-  ID_NMEA0183_INTERNAL_RADIO,
-  ID_NMEA0183_LOOPBACK_RADIO
-};
+static const int kInternalRadioId = wxWindow::NewControlId();
+static const int kLoopbackRadioId = wxWindow::NewControlId();
+static const int kNetworkRadioId = wxWindow::NewControlId();
+static const int kNmea0183CheckId = wxWindow::NewControlId();
+static const int kNmea2000CheckId = wxWindow::NewControlId();
+static const int kSignalkCheckId = wxWindow::NewControlId();
+static const int kUseSpeedThresholdCheckId = wxWindow::NewControlId();
+static const int kAutoRecordCheckId = wxWindow::NewControlId();
+static const int kDirButtonId = wxWindow::NewControlId();
+static const int kLogRotateCheckId = wxWindow::NewControlId();
 
 BEGIN_EVENT_TABLE(VDRPrefsDialog, wxDialog)
 EVT_BUTTON(wxID_OK, VDRPrefsDialog::OnOK)
-EVT_BUTTON(ID_VDR_DIR_BUTTON, VDRPrefsDialog::OnDirSelect)
-EVT_CHECKBOX(ID_VDR_LOG_ROTATE_CHECK, VDRPrefsDialog::OnLogRotateCheck)
-EVT_CHECKBOX(ID_VDR_AUTO_RECORD_CHECK, VDRPrefsDialog::OnAutoRecordCheck)
-EVT_CHECKBOX(ID_USE_SPEED_THRESHOLD_CHECK,
+EVT_BUTTON(kDirButtonId, VDRPrefsDialog::OnDirSelect)
+EVT_CHECKBOX(kLogRotateCheckId, VDRPrefsDialog::OnLogRotateCheck)
+EVT_CHECKBOX(kAutoRecordCheckId, VDRPrefsDialog::OnAutoRecordCheck)
+EVT_CHECKBOX(kUseSpeedThresholdCheckId,
              VDRPrefsDialog::OnUseSpeedThresholdCheck)
-EVT_CHECKBOX(ID_NMEA0183_CHECK, VDRPrefsDialog::OnProtocolCheck)
-EVT_CHECKBOX(ID_NMEA2000_CHECK, VDRPrefsDialog::OnProtocolCheck)
-EVT_RADIOBUTTON(ID_NMEA0183_NETWORK_RADIO,
-                VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
-EVT_RADIOBUTTON(ID_NMEA0183_INTERNAL_RADIO,
-                VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
-EVT_RADIOBUTTON(ID_NMEA0183_LOOPBACK_RADIO,
-                VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
+EVT_CHECKBOX(kNmea0183CheckId, VDRPrefsDialog::OnProtocolCheck)
+EVT_CHECKBOX(kNmea2000CheckId, VDRPrefsDialog::OnProtocolCheck)
+EVT_RADIOBUTTON(kNetworkRadioId, VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
+EVT_RADIOBUTTON(kInternalRadioId, VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
+EVT_RADIOBUTTON(kLoopbackRadioId, VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
 END_EVENT_TABLE()
 
 VDRPrefsDialog::VDRPrefsDialog(wxWindow* parent, wxWindowID id,
@@ -131,16 +126,16 @@ wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
       new wxStaticBox(panel, wxID_ANY, _("Recording Protocols"));
   auto* protocol_sizer = new wxStaticBoxSizer(protocol_box, wxVERTICAL);
 
-  m_nmea0183_check = new wxCheckBox(panel, ID_NMEA0183_CHECK, _("NMEA 0183"));
+  m_nmea0183_check = new wxCheckBox(panel, kNmea0183CheckId, _("NMEA 0183"));
   m_nmea0183_check->SetValue(m_protocols.nmea0183);
   protocol_sizer->Add(m_nmea0183_check, 0, wxALL, 5);
 
-  m_nmea2000_check = new wxCheckBox(panel, ID_NMEA2000_CHECK, _("NMEA 2000"));
+  m_nmea2000_check = new wxCheckBox(panel, kNmea2000CheckId, _("NMEA 2000"));
   m_nmea2000_check->SetValue(m_protocols.nmea2000);
   protocol_sizer->Add(m_nmea2000_check, 0, wxALL, 5);
 
 #if 0
-  m_signalKCheck = new wxCheckBox(panel, ID_SIGNALK_CHECK, _("Signal K"));
+  m_signalKCheck = new wxCheckBox(panel, kSignalkCheckId, _("Signal K"));
   m_signalKCheck->SetValue(m_protocols.signalK);
   protocol_sizer->Add(m_signalKCheck, 0, wxALL, 5);
 #endif
@@ -167,7 +162,7 @@ wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
 
   m_dir_ctrl = new wxTextCtrl(panel, wxID_ANY, m_recording_dir,
                               wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
-  m_dir_button = new wxButton(panel, ID_VDR_DIR_BUTTON, _("Browse..."));
+  m_dir_button = new wxButton(panel, kDirButtonId, _("Browse..."));
 
   dir_sizer->Add(m_dir_ctrl, 1, wxALL | wxEXPAND, 5);
   dir_sizer->Add(m_dir_button, 0, wxALL | wxEXPAND, 5);
@@ -189,8 +184,8 @@ wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
   auto* log_box = new wxStaticBox(panel, wxID_ANY, _("VDR File Management"));
   auto* log_sizer = new wxStaticBoxSizer(log_box, wxVERTICAL);
 
-  m_log_rotate_check = new wxCheckBox(panel, ID_VDR_LOG_ROTATE_CHECK,
-                                      _("Create new VDR file every:"));
+  m_log_rotate_check =
+      new wxCheckBox(panel, kLogRotateCheckId, _("Create new VDR file every:"));
   m_log_rotate_check->SetValue(m_log_rotate);
 
   auto* interval_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -213,14 +208,14 @@ wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
 
   // Auto-start option
   m_autoStartRecordingCheck = new wxCheckBox(
-      panel, ID_VDR_AUTO_RECORD_CHECK, _("Automatically start recording"));
+      panel, kAutoRecordCheckId, _("Automatically start recording"));
   m_autoStartRecordingCheck->SetValue(m_auto_start_recording);
   auto_sizer->Add(m_autoStartRecordingCheck, 0, wxALL, 5);
 
   // Speed threshold option
   auto* speed_sizer = new wxBoxSizer(wxHORIZONTAL);
   m_use_speed_threshold_check = new wxCheckBox(
-      panel, ID_USE_SPEED_THRESHOLD_CHECK, _("When speed over ground exceeds"));
+      panel, kUseSpeedThresholdCheckId, _("When speed over ground exceeds"));
   m_use_speed_threshold_check->SetValue(m_use_speed_threshold);
   speed_sizer->Add(m_use_speed_threshold_check, 0, wxALIGN_CENTER_VERTICAL);
 
@@ -262,13 +257,13 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
   auto* nmea0183_sizer = new wxStaticBoxSizer(nmea0183_box, wxVERTICAL);
 
   m_nmea0183_internal_radio = new wxRadioButton(
-      panel, ID_NMEA0183_INTERNAL_RADIO, _("NMEA 0183 using internal API"),
+      panel, kInternalRadioId, _("NMEA 0183 using internal API"),
       wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
   m_nmea0183_network_radio =
-      new wxRadioButton(panel, ID_NMEA0183_NETWORK_RADIO,
+      new wxRadioButton(panel, kNetworkRadioId,
                         _("NMEA 0183 using network connection (UDP/TCP)"));
   m_nmea0183_loopback_radio =
-      new wxRadioButton(panel, ID_NMEA0183_LOOPBACK_RADIO,
+      new wxRadioButton(panel, kLoopbackRadioId,
                         _("All messages using loopback driver (experimental)"));
 
   m_nmea0183_internal_radio->SetValue(m_protocols.replay_mode ==
@@ -365,6 +360,6 @@ void VDRPrefsDialog::OnUseSpeedThresholdCheck(wxCommandEvent& event) {
 }
 
 void VDRPrefsDialog::OnNMEA0183ReplayModeChanged(wxCommandEvent& event) {
-  m_nmea0183_net_panel->Enable(event.GetId() == ID_NMEA0183_NETWORK_RADIO);
-  m_nmea2000_net_panel->Enable(event.GetId() != ID_NMEA0183_LOOPBACK_RADIO);
+  m_nmea0183_net_panel->Enable(event.GetId() == kNetworkRadioId);
+  m_nmea2000_net_panel->Enable(event.GetId() != kLoopbackRadioId);
 }
