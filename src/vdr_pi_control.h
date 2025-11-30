@@ -25,6 +25,7 @@
 #endif
 
 #include "ocpn_plugin.h"
+#include "record_play_mgr.h"
 
 class VdrPi;
 
@@ -34,7 +35,7 @@ class VdrPi;
  * Provides controls for loading VDR files, starting/pausing playback,
  * adjusting playback speed, and monitoring playback progress.
  */
-class VDRControl : public wxWindow {
+class VDRControl : public wxWindow, public VdrControlGui {
 public:
   /**
    * Create a new VDR control panel.
@@ -44,54 +45,42 @@ public:
    * @param id Window identifier
    * @param vdr Owner VDR plugin instance
    */
-  VDRControl(wxWindow* pparent, wxWindowID id, VdrPi* vdr);
+  VDRControl(wxWindow* parent, std::shared_ptr<RecordPlayMgr> record_play_mgr);
 
-  /**
-   * Update UI elements for color scheme changes.
-   * @param cs New color scheme to apply
-   */
-  void SetColorScheme(PI_ColorScheme cs);
+  void SetColorScheme(PI_ColorScheme cs) override;
 
-  /**
-   * Update progress indication for playback position.
-   * @param fraction Current position as fraction between 0-1
-   */
-  void SetProgress(double fraction);
+  void SetProgress(double fraction) override;
 
-  /** Update state of UI controls based on playback status. */
-  void UpdateControls();
+  void UpdateControls() override;
 
-  /**
-   * Update displayed filename in UI.
-   * @param filename Path of currently loaded file
-   */
-  void UpdateFileLabel(const wxString& filename);
+  void UpdateFileLabel(const wxString& filename) override;
+
+  void UpdateFileStatus(const wxString& status);
+
+  void UpdateNetworkStatus(const wxString& status) override;
+
+  double GetSpeedMultiplier() const override;
+
+  void OnToolbarToolCallback(int id) override {
+    if (m_pvdr) m_pvdr->OnToolbarToolCallback(id);
+  }
 
   /** Update displayed timestamp in UI based on current playback position. */
   void UpdateTimeLabel();
 
-  /** Get current playback speed multiplier setting. */
-  [[nodiscard]] int GetSpeedMultiplier() const {
-    return m_speed_slider->GetValue();
+  void EnableSpeedSlider(bool enable) override {
+    m_speed_slider->Enable(enable);
   }
+
+  void ShowPreferencesDialog(wxWindow* parent) {
+    if (m_pvdr) m_pvdr->ShowPreferencesDialog(parent);
+  }
+
+  /** Update playback status label with given message. */
+  void UpdatePlaybackStatus(const wxString& status);
 
   /** Set the speed multiplier settting. */
   void SetSpeedMultiplier(int value);
-
-  /**
-   * Update file status label with new message.
-   */
-  void UpdateFileStatus(const wxString& status);
-  /**
-   * Update network status label with new message.
-   */
-  void UpdateNetworkStatus(const wxString& status);
-  /**
-   * Update playback status label with new message.
-   */
-  void UpdatePlaybackStatus(const wxString& status);
-
-  void EnableSpeedSlider(bool enable) { m_speed_slider->Enable(enable); }
 
 private:
   /** Create and layout UI controls. */
@@ -166,7 +155,7 @@ private:
   wxSlider* m_progress_slider;  //!< Slider control for playback position
   wxStaticText* m_file_label;   //!< Label showing current filename
   wxStaticText* m_time_label;   //!< Label showing current timestamp
-  VdrPi* m_pvdr;                //!< Owner plugin instance
+  std::shared_ptr<RecordPlayMgr> m_pvdr;
 
   bool m_is_dragging;              //!< Flag indicating progress slider drag
   bool m_was_playing_before_drag;  //!< Playback state before drag started

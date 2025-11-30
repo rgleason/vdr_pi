@@ -80,10 +80,11 @@ bool VDRControl::LoadFile(wxString current_file) {
   return status;
 }
 
-VDRControl::VDRControl(wxWindow* parent, wxWindowID id, VdrPi* vdr)
-    : wxWindow(parent, id, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE,
-               "VDR Control"),
-      m_pvdr(vdr),
+VDRControl::VDRControl(wxWindow* parent,
+                       std::shared_ptr<RecordPlayMgr> record_play_mgr)
+    : wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+               wxBORDER_NONE, "VDR Control"),
+      m_pvdr(record_play_mgr),
       m_is_dragging(false),
       m_was_playing_before_drag(false) {
   wxColour cl;
@@ -101,6 +102,7 @@ VDRControl::VDRControl(wxWindow* parent, wxWindowID id, VdrPi* vdr)
     UpdateFileStatus(_("No file loaded"));
   }
   UpdatePlaybackStatus(_("Stopped"));
+  Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent&) { std::cout << "Close\n"; });
 }
 
 void VDRControl::CreateControls() {
@@ -221,6 +223,7 @@ void VDRControl::CreateControls() {
 
   // Initial state
   UpdateControls();
+  Hide();
 }
 
 void VDRControl::SetSpeedMultiplier(int value) {
@@ -332,7 +335,7 @@ void VDRControl::UpdateControls() {
   m_progress_slider->Enable(has_file && !is_recording);
 
   // Update toolbar state
-  m_pvdr->SetToolbarToolStatus(m_pvdr->GetPlayToolbarItemId(), is_playing);
+  m_pvdr->SetToolbarToolStatus();
 
   // Update time display
   if (has_file && m_pvdr->GetCurrentTimestamp().IsValid()) {
@@ -347,6 +350,10 @@ void VDRControl::UpdateControls() {
   Layout();
 }
 
+double VDRControl::GetSpeedMultiplier() const {
+  return m_speed_slider->GetValue();
+}
+
 void VDRControl::UpdateFileLabel(const wxString& filename) {
   if (filename.IsEmpty()) {
     m_file_label->SetLabel(_("No file loaded"));
@@ -358,8 +365,10 @@ void VDRControl::UpdateFileLabel(const wxString& filename) {
 }
 
 void VDRControl::StartPlayback() {
-  m_pvdr->StartPlayback();
+  wxString file_status;
+  m_pvdr->StartPlayback(file_status);
   if (m_pvdr->IsPlaying()) UpdatePlaybackStatus(_("Playing"));
+  if (!file_status.empty()) UpdateFileStatus(file_status);
 }
 
 void VDRControl::PausePlayback() {

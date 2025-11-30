@@ -19,6 +19,8 @@
 #ifndef VDR_COMMONS_H_
 #define VDR_COMMONS_H_
 
+constexpr const char* const kControlWinName = "VdrControl";
+
 enum class ReplayMode {
   kNetwork,      // Use network connection
   kInternalApi,  // Use PushNMEABuffer()
