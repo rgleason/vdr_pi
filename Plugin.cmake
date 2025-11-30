@@ -46,6 +46,7 @@ set(PKG_HOMEPAGE_URL https://github.com/rgleason/vdr_pi)
 set(PKG_INFO_URL https://opencpn.org/OpenCPN/plugins/vdr.html)
 
 set(SRC
+  src/control_gui.h
   src/icons.h
   src/icons.cpp
   src/vdr_pi.h
@@ -60,6 +61,8 @@ set(SRC
   src/vdr_pi_time.cpp
   src/vdr_network.h
   src/vdr_network.cpp
+  src/record_play_mgr.h
+  src/record_play_mgr.cpp
   src/dm_replay_mgr.h
   src/dm_replay_mgr.cpp
 )
