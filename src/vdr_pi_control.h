@@ -72,10 +72,6 @@ public:
     m_speed_slider->Enable(enable);
   }
 
-  void ShowPreferencesDialog(wxWindow* parent) {
-    if (m_pvdr) m_pvdr->ShowPreferencesDialog(parent);
-  }
-
   /** Update playback status label with given message. */
   void UpdatePlaybackStatus(const wxString& status);
 
