@@ -29,6 +29,12 @@ endif ()
 #
 include(Plugin.cmake)
 
+#------ Local setup e. g. IDE specific stuff --------
+#
+if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/local_config.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/local_config.cmake)
+endif ()
+
 # -------- Setup completed, build the plugin --------
 #
 project(${PKG_NAME} VERSION ${PKG_VERSION})
@@ -76,7 +82,7 @@ if ("${BUILD_TYPE}" STREQUAL "")
   return ()
 endif ()
 
- 
+
 if (NOT ${BUILD_TYPE} STREQUAL "flatpak")
   # Build package as required (flatpak already dealt with).
   #
@@ -92,7 +98,7 @@ if (NOT ${BUILD_TYPE} STREQUAL "flatpak")
   include(PluginLocalization)
 
   include_directories(BEFORE ${CMAKE_BINARY_DIR}/include)
- 
+
   if (COMMAND add_plugin_libraries)
     add_plugin_libraries()
   endif ()

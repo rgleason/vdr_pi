@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2024 by OpenCPN development team                        *
+ *   Copyright (C) 2011  Jean-Eudes Onfray                                 *
+ *   Copyright (C) 2025  Sebastian Rosset                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -12,25 +13,23 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
+
+#include <ctime>
 
 #include "wx/wxprec.h"
 
 #ifndef WX_PRECOMP
 #include "wx/wx.h"
-#endif  // precompiled headers
+#endif
 
 #include "wx/tokenzr.h"
-
-#include <time.h>
 
 #include "vdr_pi_time.h"
 
 bool TimestampParser::ParseTimeField(const wxString& timeStr,
-                                     NMEATimeInfo& info, int& precision) const {
+                                     NmeaTimeInfo& info, int& precision) {
   if (timeStr.length() < 6) return false;
 
   // Parse base time components
@@ -64,12 +63,12 @@ bool TimestampParser::ParseTimeField(const wxString& timeStr,
     return false;
   }
 
-  info.hasTime = true;
+  info.has_time = true;
   return true;
 }
 
 bool TimestampParser::ParseRMCDate(const wxString& dateStr,
-                                   NMEATimeInfo& info) {
+                                   NmeaTimeInfo& info) {
   if (dateStr.length() < 6) return false;
 
   info.tm.tm_mday = wxAtoi(dateStr.Mid(0, 2));
@@ -82,33 +81,33 @@ bool TimestampParser::ParseRMCDate(const wxString& dateStr,
   return ValidateAndSetDate(info);
 }
 
-bool TimestampParser::ValidateAndSetDate(NMEATimeInfo& info) {
+bool TimestampParser::ValidateAndSetDate(NmeaTimeInfo& info) {
   if (info.tm.tm_mon < 1 || info.tm.tm_mon > 12 || info.tm.tm_mday < 1 ||
       info.tm.tm_mday > 31 || info.tm.tm_year < 0) {
     return false;
   }
 
   // Cache valid date components for sentences with only time
-  m_lastValidYear = info.tm.tm_year + 1900;
-  m_lastValidMonth = info.tm.tm_mon;
-  m_lastValidDay = info.tm.tm_mday;
+  m_last_valid_year = info.tm.tm_year + 1900;
+  m_last_valid_month = info.tm.tm_mon;
+  m_last_valid_day = info.tm.tm_mday;
 
-  info.hasDate = true;
+  info.has_date = true;
   return true;
 }
 
 // Applies cached date if available
-void TimestampParser::ApplyCachedDate(NMEATimeInfo& info) const {
-  if (m_lastValidYear > 0) {
-    info.tm.tm_year = m_lastValidYear - 1900;
-    info.tm.tm_mon = m_lastValidMonth;
-    info.tm.tm_mday = m_lastValidDay;
-    info.hasDate = true;
+void TimestampParser::ApplyCachedDate(NmeaTimeInfo& info) const {
+  if (m_last_valid_year > 0) {
+    info.tm.tm_year = m_last_valid_year - 1900;
+    info.tm.tm_mon = m_last_valid_month;
+    info.tm.tm_mday = m_last_valid_day;
+    info.has_date = true;
   }
 }
 
 bool TimestampParser::ParseIso8601Timestamp(const wxString& timeStr,
-                                            wxDateTime* timestamp) const {
+                                            wxDateTime* timestamp) {
   // Expected format: YYYY-MM-DDThh:mm:ss.sssZ
 
   // Parse the main date/time part using ISO format
@@ -137,11 +136,12 @@ bool TimestampParser::ParseTimestamp(const wxString& sentence,
   wxString talkerId = sentenceId.Mid(1, 2);
   wxString sentenceType = sentenceId.Mid(3);
 
-  if (m_useOnlyPrimarySource && (m_primarySource.talkerId != talkerId ||
-                                 m_primarySource.sentenceId != sentenceType)) {
+  if (m_useOnlyPrimarySource &&
+      (m_primary_source.talker_id != talkerId ||
+       m_primary_source.sentence_id != sentenceType)) {
     return false;
   }
-  NMEATimeInfo timeInfo;
+  NmeaTimeInfo timeInfo;
 
   // Handle different sentence types
   if (sentenceType == "RMC") {  // GPRMC, GNRMC, etc
@@ -196,7 +196,7 @@ bool TimestampParser::ParseTimestamp(const wxString& sentence,
     // Try to use cached date information
     ApplyCachedDate(timeInfo);
   }
-  if (m_useOnlyPrimarySource && precision != m_primarySource.precision) {
+  if (m_useOnlyPrimarySource && precision != m_primary_source.precision) {
     return false;
   }
 
@@ -220,7 +220,7 @@ bool TimestampParser::ParseTimestamp(const wxString& sentence,
 void TimestampParser::SetPrimaryTimeSource(const wxString& talkerId,
                                            const wxString& msgType,
                                            int precision) {
-  m_primarySource = TimeSource{talkerId, msgType, precision};
+  m_primary_source = TimeSource{talkerId, msgType, precision};
   m_useOnlyPrimarySource = true;
 }
 
@@ -229,13 +229,13 @@ void TimestampParser::DisablePrimaryTimeSource() {
 }
 
 void TimestampParser::Reset() {
-  m_lastValidYear = 0;
-  m_lastValidMonth = 0;
-  m_lastValidDay = 0;
+  m_last_valid_year = 0;
+  m_last_valid_month = 0;
+  m_last_valid_day = 0;
   m_useOnlyPrimarySource = false;
 }
 
-bool TimestampParser::ParseCSVLineTimestamp(const wxString& line,
+bool TimestampParser::ParseCsvLineTimestamp(const wxString& line,
                                             unsigned int timestamp_idx,
                                             unsigned int message_idx,
                                             wxString* message,

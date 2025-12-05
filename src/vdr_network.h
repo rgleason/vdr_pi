@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2024 by OpenCPN development team                        *
+ *   Copyright (C) 2011  Jean-Eudes Onfray                                 *
+ *   Copyright (C) 2025  Sebastian Rosset                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -12,19 +13,17 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
-#ifndef _VDR_NETWORK_H_
-#define _VDR_NETWORK_H_
-
-#include <wx/wx.h>
-#include <wx/socket.h>
+#ifndef VDR_NETWORK_H_
+#define VDR_NETWORK_H_
 
 #include <vector>
 #include <memory>
+
+#include <wx/wx.h>
+#include <wx/socket.h>
 
 // Forward declarations
 class wxSocketServer;
@@ -44,7 +43,7 @@ public:
   VDRNetworkServer();
 
   /** Destructor ensures proper cleanup of sockets. */
-  ~VDRNetworkServer();
+  ~VDRNetworkServer() override;
 
   /**
    * Start the network server.
@@ -83,13 +82,13 @@ public:
   bool SendBinary(const void* data, size_t length);
 
   /** Check if server is currently running. */
-  bool IsRunning() const { return m_running; }
+  [[nodiscard]] bool IsRunning() const { return m_running; }
 
   /** Get current protocol (TCP/UDP). */
-  bool IsTCP() const { return m_useTCP; }
+  [[nodiscard]] bool IsTCP() const { return m_useTCP; }
 
   /** Get current port number. */
-  int GetPort() const { return m_port; }
+  [[nodiscard]] int GetPort() const { return m_port; }
 
 private:
   /** Handle incoming TCP socket events. */
@@ -118,9 +117,9 @@ private:
   bool m_useTCP;                            //!< Current protocol
   int m_port;                               //!< Current port
 
-  static const int DEFAULT_PORT = 10111;  //!< Default NMEA port
+  static constexpr int kDefaultPort = 10111;  //!< Default NMEA port
 
   DECLARE_EVENT_TABLE()
 };
 
-#endif  // _VDR_NETWORK_H_
+#endif  // VDR_NETWORK_H_

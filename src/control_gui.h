@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2011  Jean-Eudes Onfray                                 *
- *   Copyright (C) 2025  Sebastian Rosser                                  *
+ *   Copyright (C) 2025  Sebastian Rosset                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,51 +16,48 @@
  *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
-#ifndef VDR_PI_PREFS_NET_H_
-#define VDR_PI_PREFS_NET_H_
+#ifndef CONTROL_GUI_H_
+#define CONTROL_GUI_H_
 
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
 #endif
 
-#include <wx/dialog.h>
-#include <wx/spinctrl.h>
+#include "ocpn_plugin.h"
+#include "record_play_mgr.h"
 
-struct ConnectionSettings;
+class VdrPi;
 
-/** UI component for connection settings */
-class ConnectionSettingsPanel : public wxPanel {
+/**
+ * Limited GUI interface fully visible.
+ */
+class VdrControlGui {
 public:
+  virtual void SetColorScheme(PI_ColorScheme cs) = 0;
+
   /**
-   * Create connection settings panel.
-   *
-   * @param parent Parent window
-   * @param title Title for the static box
-   * @param settings Initial connection settings
+   * Update progress indication for playback position.
+   * @param fraction Current position as fraction between 0-1
    */
-  ConnectionSettingsPanel(wxWindow* parent, const wxString& title,
-                          const ConnectionSettings& settings);
+  virtual void SetProgress(double fraction) = 0;
 
-  /** Get current connection settings from controls */
-  [[nodiscard]] ConnectionSettings GetSettings() const;
+  /** Update state of UI controls based on playback status. */
+  virtual void UpdateControls() = 0;
 
-  /** Update controls with new settings */
-  void SetSettings(const ConnectionSettings& settings);
+  /**
+   * Update displayed filename in UI.
+   * @param filename Path of currently loaded file
+   */
+  virtual void UpdateFileLabel(const wxString& filename) = 0;
 
-private:
-  /** Handle network enable checkbox */
-  void OnEnableNetwork(wxCommandEvent& event);
+  virtual void UpdateNetworkStatus(const wxString& status) = 0;
 
-  /** Update enabled state of controls */
-  void UpdateControlStates();
+  virtual void OnToolbarToolCallback(int id) = 0;
 
-  wxCheckBox* m_enable_check;  //!< Enable network output
-  wxRadioButton* m_tcp_radio;  //!< Use TCP protocol
-  wxRadioButton* m_udp_radio;  //!< Use UDP protocol
-  wxSpinCtrl* m_port_ctrl;     //!< Port number control
+  virtual void EnableSpeedSlider(bool enable) = 0;
 
-  DECLARE_EVENT_TABLE()
+  virtual double GetSpeedMultiplier() const = 0;
 };
 
-#endif  // VDR_PI_PREFS_NET_H_
+#endif  // CONTROL_GUI_H_

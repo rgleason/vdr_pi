@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2024 by OpenCPN development team                        *
+ *   Copyright (C) 2011  Jean-Eudes Onfray                                 *
+ *   Copyright (C) 2025  Sebastian Rosset                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -12,9 +13,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
 #include "vdr_network.h"
@@ -34,7 +33,7 @@ VDRNetworkServer::VDRNetworkServer()
       m_udpSocket(nullptr),
       m_running(false),
       m_useTCP(true),
-      m_port(DEFAULT_PORT) {
+      m_port(kDefaultPort) {
   // Initialize socket handling
   wxSocketBase::Initialize();
 }
@@ -65,7 +64,7 @@ bool VDRNetworkServer::Start(bool useTCP, int port, wxString& error) {
 
   if (success) {
     m_running = true;
-    error = wxEmptyString;
+    error = "";
     wxLogMessage("VDR Network Server started - %s on port %d",
                  m_useTCP ? "TCP" : "UDP", m_port);
   }
@@ -173,7 +172,7 @@ bool VDRNetworkServer::InitTCP(int port, wxString& error) {
   m_tcpServer->SetNotify(wxSOCKET_CONNECTION_FLAG);
   // Enable the event notifications.
   m_tcpServer->Notify(true);
-  error = wxEmptyString;
+  error = "";
   wxLogMessage("TCP server initialized on port %d", port);
   return true;
 }
@@ -198,7 +197,7 @@ bool VDRNetworkServer::InitUDP(int port, wxString& error) {
     m_udpSocket = nullptr;
     return false;
   }
-  error = wxEmptyString;
+  error = "";
   wxLogMessage("UDP server initialized on port %d", port);
   return true;
 }
