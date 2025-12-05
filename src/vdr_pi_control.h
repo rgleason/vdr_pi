@@ -107,7 +107,7 @@ private:
    *
    * Temporarily pauses playback while user drags position slider.
    */
-  void OnProgressSliderUpdated(wxScrollEvent& even);
+  void OnProgressSliderUpdated(wxScrollWinEvent& even);
 
   /**
    * Handle progress slider release.
@@ -161,8 +161,6 @@ private:
   wxStaticText* m_playback_status_lbl;  //!< Label showing playback status.
 
   int m_button_size;  //!< Size of SVG button icons.
-
-  DECLARE_EVENT_TABLE()
 };
 
 #endif  // VDR_PI_CONTROL_H_

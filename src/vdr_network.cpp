@@ -20,13 +20,8 @@
 
 #include <algorithm>
 
-// Socket event IDs
-enum { SOCKET_ID = 5000, SERVER_ID };
-
-BEGIN_EVENT_TABLE(VDRNetworkServer, wxEvtHandler)
-EVT_SOCKET(SERVER_ID, VDRNetworkServer::OnTcpEvent)
-EVT_SOCKET(SOCKET_ID, VDRNetworkServer::OnTcpEvent)
-END_EVENT_TABLE()
+// Avoid strange wxDFEFINE_EVENT(...) macro:
+static const wxEventTypeTag<wxSocketEvent> EvtTcpSocket(wxNewEventType());
 
 VDRNetworkServer::VDRNetworkServer()
     : m_tcpServer(nullptr),
@@ -36,6 +31,7 @@ VDRNetworkServer::VDRNetworkServer()
       m_port(kDefaultPort) {
   // Initialize socket handling
   wxSocketBase::Initialize();
+  Bind(EvtTcpSocket, [&](wxSocketEvent& ev) { OnTcpEvent(ev); });
 }
 
 VDRNetworkServer::~VDRNetworkServer() {
@@ -208,7 +204,7 @@ void VDRNetworkServer::OnTcpEvent(wxSocketEvent& event) {
       // Accept new client connection
       wxSocketBase* client = m_tcpServer->Accept(false);
       if (client) {
-        client->SetEventHandler(*this, SOCKET_ID);
+        client->SetEventHandler(*this, EvtTcpSocket);
         client->SetNotify(wxSOCKET_LOST_FLAG);
         client->Notify(true);
         m_tcpClients.push_back(client);

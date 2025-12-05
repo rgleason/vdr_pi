@@ -33,24 +33,6 @@ in VDR mode. You might want to adjust the Replay
 preferences to "Use loopback driver" to be able to
 play it.)");
 
-static const int kDataFormatRadioBtnId = wxWindow::NewControlId();
-static const int kLoadId = wxWindow::NewControlId();
-static const int kPlayPauseId = wxWindow::NewControlId();
-static const int kProgressId = wxWindow::NewControlId();
-static const int kSettingsId = wxWindow::NewControlId();
-static const int kSpeedSliderId = wxWindow::NewControlId();
-
-BEGIN_EVENT_TABLE(VdrControl, wxWindow)
-EVT_BUTTON(kLoadId, VdrControl::OnLoadButton)
-EVT_RADIOBUTTON(kDataFormatRadioBtnId, VdrControl::OnDataFormatRadioButton)
-EVT_BUTTON(kPlayPauseId, VdrControl::OnPlayPauseButton)
-EVT_BUTTON(kSettingsId, VdrControl::OnSettingsButton)
-EVT_SLIDER(kSpeedSliderId, VdrControl::OnSpeedSliderUpdated)
-EVT_COMMAND_SCROLL_THUMBTRACK(kProgressId, VdrControl::OnProgressSliderUpdated)
-EVT_COMMAND_SCROLL_THUMBRELEASE(kProgressId,
-                                VdrControl::OnProgressSliderEndDrag)
-END_EVENT_TABLE()
-
 bool VdrControl::LoadFile(const wxString& current_file) {
   bool status = true;
   wxString error;
@@ -124,17 +106,20 @@ void VdrControl::CreateControls() {
 
   // Settings button
   m_settings_btn = new wxBitmapButton(
-      this, kSettingsId,
-      GetBitmapFromSVGFile(g_svg_settings, svg_size, svg_size),
+      this, wxID_ANY, GetBitmapFromSVGFile(g_svg_settings, svg_size, svg_size),
       wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
   m_settings_btn->SetToolTip(_("Settings"));
+  m_settings_btn->Bind(wxEVT_BUTTON,
+                       [&](wxCommandEvent& ev) { OnSettingsButton(ev); });
   file_sizer->Add(m_settings_btn, 0, wxALL, 2);
 
   // Load button
   m_load_btn = new wxBitmapButton(
-      this, kLoadId, GetBitmapFromSVGFile(g_svg_file_open, svg_size, svg_size),
+      this, wxID_ANY, GetBitmapFromSVGFile(g_svg_file_open, svg_size, svg_size),
       wxDefaultPosition, buttonDimension, wxBU_EXACTFIT);
   m_load_btn->SetToolTip(_("Load VDR File"));
+  m_load_btn->Bind(wxEVT_BUTTON, [&](wxCommandEvent& ev) { OnLoadButton(ev); });
+
   file_sizer->Add(m_load_btn, 0, wxALL, 2);
 
   m_file_label =
@@ -153,16 +138,25 @@ void VdrControl::CreateControls() {
   m_stop_btn_tooltip = _("End of File");
 
   m_play_pause_btn = new wxBitmapButton(
-      this, kPlayPauseId,
+      this, wxID_ANY,
       GetBitmapFromSVGFile(g_svg_play_circle, svg_size, svg_size),
       wxDefaultPosition, buttonDimension, wxBU_EXACTFIT);
   m_play_pause_btn->SetToolTip(m_play_btn_tooltip);
+  m_play_pause_btn->Bind(wxEVT_BUTTON,
+                         [&](wxCommandEvent& ev) { OnPlayPauseButton(ev); });
   control_sizer->Add(m_play_pause_btn, 0, wxALL, 3);
 
   // Progress slider in the same row as play button
   m_progress_slider =
-      new wxSlider(this, kProgressId, 0, 0, 1000, wxDefaultPosition,
-                   wxDefaultSize, wxSL_HORIZONTAL | wxSL_BOTTOM);
+      new wxSlider(this, wxID_ANY, 0, 0, 1000, wxDefaultPosition, wxDefaultSize,
+                   wxSL_HORIZONTAL | wxSL_BOTTOM);
+  m_progress_slider->Bind(
+      wxEVT_SCROLLWIN_THUMBTRACK,
+      [&](wxScrollWinEvent& ev) { OnProgressSliderUpdated(ev); });
+  m_progress_slider->Bind(
+      wxEVT_SCROLLWIN_THUMBRELEASE,
+      [&](wxScrollWinEvent& ev) { OnProgressSliderUpdated(ev); });
+
   control_sizer->Add(m_progress_slider, 1, wxALIGN_CENTER_VERTICAL, 0);
   main_sizer->Add(control_sizer, 0, wxEXPAND | wxALL, 4);
 
@@ -178,6 +172,8 @@ void VdrControl::CreateControls() {
   m_speed_slider =
       new wxSlider(this, wxID_ANY, 1, 1, 1000, wxDefaultPosition, wxDefaultSize,
                    wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
+  m_speed_slider->Bind(wxEVT_SLIDER,
+                       [&](wxCommandEvent& ev) { OnSpeedSliderUpdated(ev); });
   speed_sizer->Add(m_speed_slider, 1, wxALL | wxEXPAND, 0);
   main_sizer->Add(speed_sizer, 0, wxEXPAND | wxALL, 4);
 
@@ -269,7 +265,7 @@ void VdrControl::OnLoadButton(wxCommandEvent& event) {
   LoadFile(file);
 }
 
-void VdrControl::OnProgressSliderUpdated(wxScrollEvent& event) {
+void VdrControl::OnProgressSliderUpdated(wxScrollWinEvent& event) {
   if (!m_is_dragging) {
     m_is_dragging = true;
     m_was_playing_before_drag = m_pvdr->IsPlaying();

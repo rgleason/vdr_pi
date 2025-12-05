@@ -18,10 +18,6 @@
 
 #include "vdr_pi_prefs.h"
 
-BEGIN_EVENT_TABLE(ConnectionSettingsPanel, wxPanel)
-EVT_CHECKBOX(wxID_ANY, ConnectionSettingsPanel::OnEnableNetwork)
-END_EVENT_TABLE()
-
 ConnectionSettingsPanel::ConnectionSettingsPanel(
     wxWindow* parent, const wxString& title, const ConnectionSettings& settings)
     : wxPanel(parent) {

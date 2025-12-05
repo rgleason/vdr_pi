@@ -171,8 +171,6 @@ private:
   int m_stop_delay;             //!< Minutes before stopping
 
   VdrProtocolSettings m_protocols;  //!< Protocol selection settings
-
-  DECLARE_EVENT_TABLE()
 };
 
 #endif

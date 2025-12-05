@@ -59,8 +59,6 @@ private:
   wxRadioButton* m_tcp_radio;  //!< Use TCP protocol
   wxRadioButton* m_udp_radio;  //!< Use UDP protocol
   wxSpinCtrl* m_port_ctrl;     //!< Port number control
-
-  DECLARE_EVENT_TABLE()
 };
 
 #endif  // VDR_PI_PREFS_NET_H_

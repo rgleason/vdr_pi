@@ -118,8 +118,6 @@ private:
   int m_port;                               //!< Current port
 
   static constexpr int kDefaultPort = 10111;  //!< Default NMEA port
-
-  DECLARE_EVENT_TABLE()
 };
 
 #endif  // VDR_NETWORK_H_
