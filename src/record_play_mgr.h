@@ -51,7 +51,7 @@ wxDECLARE_EVENT(EVT_SIGNALK, ObservedEvt);
 // Request default positioning of toolbar tool
 static constexpr int kVdrToolPosition = -1;
 
-class VDRControl;
+class VdrControl;
 
 /**
  * Column definition for CSV format files.
@@ -70,7 +70,8 @@ public:
   /** Creates a new VDR plugin instance. */
   RecordPlayMgr(opencpn_plugin* parent, VdrControlGui* control_gui);
 
-  RecordPlayMgr(opencpn_plugin* parent) : RecordPlayMgr(parent, nullptr) {}
+  explicit RecordPlayMgr(opencpn_plugin* parent)
+      : RecordPlayMgr(parent, nullptr) {}
 
   void Init();
 

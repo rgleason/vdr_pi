@@ -72,7 +72,7 @@ int VdrPi::Init() {
   AddLocaleCatalog("opencpn-vdr_pi");
 
   m_record_play_mgr = std::make_shared<RecordPlayMgr>(this);
-  m_pvdrcontrol = new VDRControl(wxTheApp->GetTopWindow(), m_record_play_mgr);
+  m_pvdrcontrol = new VdrControl(wxTheApp->GetTopWindow(), m_record_play_mgr);
   CreateControl();
   m_pauimgr->Update();
   m_record_play_mgr->SetControlGui(m_pvdrcontrol);

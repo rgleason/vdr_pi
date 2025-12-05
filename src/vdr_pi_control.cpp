@@ -40,25 +40,24 @@ static const int kProgressId = wxWindow::NewControlId();
 static const int kSettingsId = wxWindow::NewControlId();
 static const int kSpeedSliderId = wxWindow::NewControlId();
 
-BEGIN_EVENT_TABLE(VDRControl, wxWindow)
-EVT_BUTTON(kLoadId, VDRControl::OnLoadButton)
-EVT_RADIOBUTTON(kDataFormatRadioBtnId, VDRControl::OnDataFormatRadioButton)
-EVT_BUTTON(kPlayPauseId, VDRControl::OnPlayPauseButton)
-EVT_BUTTON(kSettingsId, VDRControl::OnSettingsButton)
-EVT_SLIDER(kSpeedSliderId, VDRControl::OnSpeedSliderUpdated)
-EVT_COMMAND_SCROLL_THUMBTRACK(kProgressId, VDRControl::OnProgressSliderUpdated)
+BEGIN_EVENT_TABLE(VdrControl, wxWindow)
+EVT_BUTTON(kLoadId, VdrControl::OnLoadButton)
+EVT_RADIOBUTTON(kDataFormatRadioBtnId, VdrControl::OnDataFormatRadioButton)
+EVT_BUTTON(kPlayPauseId, VdrControl::OnPlayPauseButton)
+EVT_BUTTON(kSettingsId, VdrControl::OnSettingsButton)
+EVT_SLIDER(kSpeedSliderId, VdrControl::OnSpeedSliderUpdated)
+EVT_COMMAND_SCROLL_THUMBTRACK(kProgressId, VdrControl::OnProgressSliderUpdated)
 EVT_COMMAND_SCROLL_THUMBRELEASE(kProgressId,
-                                VDRControl::OnProgressSliderEndDrag)
+                                VdrControl::OnProgressSliderEndDrag)
 END_EVENT_TABLE()
 
-bool VDRControl::LoadFile(wxString current_file) {
+bool VdrControl::LoadFile(const wxString& current_file) {
   bool status = true;
   wxString error;
   UpdatePlaybackStatus(_("Stopped"));
   UpdateNetworkStatus("");
   if (m_pvdr->LoadFile(current_file, &error)) {
     bool hasValidTimestamps;
-    wxString error;
     bool success = m_pvdr->ScanFileTimestamps(hasValidTimestamps, error);
     UpdateFileLabel(current_file);
     if (!success) {
@@ -80,11 +79,11 @@ bool VDRControl::LoadFile(wxString current_file) {
   return status;
 }
 
-VDRControl::VDRControl(wxWindow* parent,
+VdrControl::VdrControl(wxWindow* parent,
                        std::shared_ptr<RecordPlayMgr> record_play_mgr)
     : wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                wxBORDER_NONE, "VDR Control"),
-      m_pvdr(record_play_mgr),
+      m_pvdr(std::move(record_play_mgr)),
       m_is_dragging(false),
       m_was_playing_before_drag(false) {
   wxColour cl;
@@ -102,26 +101,26 @@ VDRControl::VDRControl(wxWindow* parent,
     UpdateFileStatus(_("No file loaded"));
   }
   UpdatePlaybackStatus(_("Stopped"));
-  Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent&) { std::cout << "Close\n"; });
+  Bind(wxEVT_CLOSE_WINDOW, [](wxCloseEvent&) { std::cout << "Close\n"; });
 }
 
-void VDRControl::CreateControls() {
+void VdrControl::CreateControls() {
   // Main vertical sizer
-  wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
+  auto* main_sizer = new wxBoxSizer(wxVERTICAL);
 
   // Ensure minimum button size of 7 mm for touch usability
   double pixel_per_mm = wxGetDisplaySize().x / PlugInGetDisplaySizeMM();
-  m_button_size = 7 * pixel_per_mm;
+  m_button_size = static_cast<int>(7 * pixel_per_mm);
 #ifdef __WXQT__
   // A simple way to get touch-compatible tool size
   wxRect tbRect = GetMasterToolbarRect();
   m_button_size = std::max(m_button_size, tbRect.width / 2);
 #endif
   wxSize buttonDimension(m_button_size, m_button_size);
-  int svg_size = m_button_size * OCPN_GetWinDIPScaleFactor();
+  int svg_size = static_cast<int>(m_button_size * OCPN_GetWinDIPScaleFactor());
 
   // File information section
-  wxBoxSizer* file_sizer = new wxBoxSizer(wxHORIZONTAL);
+  auto* file_sizer = new wxBoxSizer(wxHORIZONTAL);
 
   // Settings button
   m_settings_btn = new wxBitmapButton(
@@ -187,7 +186,7 @@ void VDRControl::CreateControls() {
   auto* status_sizer = new wxStaticBoxSizer(status_box, wxVERTICAL);
 
   // File status
-  wxBoxSizer* file_status_sizer = new wxBoxSizer(wxHORIZONTAL);
+  auto* file_status_sizer = new wxBoxSizer(wxHORIZONTAL);
   file_status_sizer->Add(new wxStaticText(this, wxID_ANY, _("File: ")), 0,
                          wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
   m_file_status_lbl = new wxStaticText(this, wxID_ANY, "");
@@ -226,13 +225,13 @@ void VDRControl::CreateControls() {
   Hide();
 }
 
-void VDRControl::SetSpeedMultiplier(int value) {
+void VdrControl::SetSpeedMultiplier(int value) {
   value = std::max(value, m_speed_slider->GetMin());
   value = std::min(value, m_speed_slider->GetMax());
   m_speed_slider->SetValue(value);
 }
 
-void VDRControl::UpdateTimeLabel() {
+void VdrControl::UpdateTimeLabel() {
   if (m_pvdr->GetCurrentTimestamp().IsValid()) {
     wxString time_str =
         m_pvdr->GetCurrentTimestamp().ToUTC().Format("%Y-%m-%d %H:%M:%S UTC");
@@ -242,7 +241,7 @@ void VDRControl::UpdateTimeLabel() {
   }
 }
 
-void VDRControl::OnLoadButton(wxCommandEvent& event) {
+void VdrControl::OnLoadButton(wxCommandEvent& event) {
   // Stop any current playback
   if (m_pvdr->IsPlaying()) {
     StopPlayback();
@@ -270,7 +269,7 @@ void VDRControl::OnLoadButton(wxCommandEvent& event) {
   LoadFile(file);
 }
 
-void VDRControl::OnProgressSliderUpdated(wxScrollEvent& event) {
+void VdrControl::OnProgressSliderUpdated(wxScrollEvent& event) {
   if (!m_is_dragging) {
     m_is_dragging = true;
     m_was_playing_before_drag = m_pvdr->IsPlaying();
@@ -292,7 +291,7 @@ void VDRControl::OnProgressSliderUpdated(wxScrollEvent& event) {
   event.Skip();
 }
 
-void VDRControl::OnProgressSliderEndDrag(wxScrollEvent& event) {
+void VdrControl::OnProgressSliderEndDrag(wxScrollEvent& event) {
   double fraction = m_progress_slider->GetValue() / 1000.0;
   m_pvdr->SeekToFraction(fraction);
   // Reset the end-of-file state when user drags the slider, the button should
@@ -306,7 +305,7 @@ void VDRControl::OnProgressSliderEndDrag(wxScrollEvent& event) {
   event.Skip();
 }
 
-void VDRControl::UpdateControls() {
+void VdrControl::UpdateControls() {
   bool has_file = !m_pvdr->GetInputFile().IsEmpty();
   bool is_recording = m_pvdr->IsRecording();
   bool is_playing = m_pvdr->IsPlaying();
@@ -350,11 +349,11 @@ void VDRControl::UpdateControls() {
   Layout();
 }
 
-double VDRControl::GetSpeedMultiplier() const {
+double VdrControl::GetSpeedMultiplier() const {
   return m_speed_slider->GetValue();
 }
 
-void VDRControl::UpdateFileLabel(const wxString& filename) {
+void VdrControl::UpdateFileLabel(const wxString& filename) {
   if (filename.IsEmpty()) {
     m_file_label->SetLabel(_("No file loaded"));
   } else {
@@ -364,24 +363,27 @@ void VDRControl::UpdateFileLabel(const wxString& filename) {
   m_file_label->GetParent()->Layout();
 }
 
-void VDRControl::StartPlayback() {
+// Unused, to be removed
+void VdrControl::StartPlayback() {
   wxString file_status;
   m_pvdr->StartPlayback(file_status);
   if (m_pvdr->IsPlaying()) UpdatePlaybackStatus(_("Playing"));
   if (!file_status.empty()) UpdateFileStatus(file_status);
 }
 
-void VDRControl::PausePlayback() {
+// Unused, to be removed
+void VdrControl::PausePlayback() {
   m_pvdr->PausePlayback();
   UpdatePlaybackStatus(_("Paused"));
 }
 
-void VDRControl::StopPlayback() {
+// Unused, to be removed
+void VdrControl::StopPlayback() {
   m_pvdr->StopPlayback();
   UpdatePlaybackStatus(_("Stopped"));
 }
 
-void VDRControl::OnPlayPauseButton(wxCommandEvent& event) {
+void VdrControl::OnPlayPauseButton(wxCommandEvent& event) {
   if (!m_pvdr->IsPlaying()) {
     if (m_pvdr->GetInputFile().IsEmpty()) {
       UpdateFileStatus(_("No file selected"));
@@ -399,23 +401,23 @@ void VDRControl::OnPlayPauseButton(wxCommandEvent& event) {
   UpdateControls();
 }
 
-void VDRControl::OnDataFormatRadioButton(wxCommandEvent& event) {
+void VdrControl::OnDataFormatRadioButton(wxCommandEvent& event) {
   // Radio button state is tracked by wx, we just need to handle any
   // format-specific UI updates here if needed in the future
 }
 
-void VDRControl::OnSettingsButton(wxCommandEvent& event) {
+void VdrControl::OnSettingsButton(wxCommandEvent& event) {
   m_pvdr->ShowPreferencesDialogNative(this);
   event.Skip();
 }
 
-void VDRControl::OnSpeedSliderUpdated(wxCommandEvent& event) {
+void VdrControl::OnSpeedSliderUpdated(wxCommandEvent& event) {
   if (m_pvdr->IsPlaying()) {
     m_pvdr->AdjustPlaybackBaseTime();
   }
 }
 
-void VDRControl::SetProgress(double fraction) {
+void VdrControl::SetProgress(double fraction) {
   // Update slider position (0-1000 range)
   int slider_pos = wxRound(fraction * 1000);
   m_progress_slider->SetValue(slider_pos);
@@ -425,8 +427,8 @@ void VDRControl::SetProgress(double fraction) {
     // Calculate and set current timestamp based on the fraction
     wxTimeSpan total_span =
         m_pvdr->GetLastTimestamp() - m_pvdr->GetFirstTimestamp();
-    wxTimeSpan current_span =
-        wxTimeSpan::Seconds((total_span.GetSeconds().ToDouble() * fraction));
+    double seconds = total_span.GetSeconds().ToDouble() * fraction;
+    wxTimeSpan current_span = wxTimeSpan::Seconds(std::round(seconds));
     m_pvdr->SetCurrentTimestamp(m_pvdr->GetFirstTimestamp() + current_span);
 
     // Update time display
@@ -434,7 +436,7 @@ void VDRControl::SetProgress(double fraction) {
   }
 }
 
-void VDRControl::SetColorScheme(PI_ColorScheme cs) {
+void VdrControl::SetColorScheme(PI_ColorScheme cs) {
   wxColour cl;
   GetGlobalColor("DILG1", &cl);
   SetBackgroundColour(cl);
@@ -442,19 +444,19 @@ void VDRControl::SetColorScheme(PI_ColorScheme cs) {
   Refresh(false);
 }
 
-void VDRControl::UpdateFileStatus(const wxString& status) {
+void VdrControl::UpdateFileStatus(const wxString& status) {
   if (m_file_status_lbl) {
     m_file_status_lbl->SetLabel(status);
   }
 }
 
-void VDRControl::UpdateNetworkStatus(const wxString& status) {
+void VdrControl::UpdateNetworkStatus(const wxString& status) {
   if (m_network_status_lbl) {
     m_network_status_lbl->SetLabel(status);
   }
 }
 
-void VDRControl::UpdatePlaybackStatus(const wxString& status) {
+void VdrControl::UpdatePlaybackStatus(const wxString& status) {
   if (m_playback_status_lbl) {
     m_playback_status_lbl->SetLabel(status);
   }

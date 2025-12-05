@@ -34,21 +34,21 @@ static const int kAutoRecordCheckId = wxWindow::NewControlId();
 static const int kDirButtonId = wxWindow::NewControlId();
 static const int kLogRotateCheckId = wxWindow::NewControlId();
 
-BEGIN_EVENT_TABLE(VDRPrefsDialog, wxDialog)
-EVT_BUTTON(wxID_OK, VDRPrefsDialog::OnOK)
-EVT_BUTTON(kDirButtonId, VDRPrefsDialog::OnDirSelect)
-EVT_CHECKBOX(kLogRotateCheckId, VDRPrefsDialog::OnLogRotateCheck)
-EVT_CHECKBOX(kAutoRecordCheckId, VDRPrefsDialog::OnAutoRecordCheck)
+BEGIN_EVENT_TABLE(VdrPrefsDialog, wxDialog)
+EVT_BUTTON(wxID_OK, VdrPrefsDialog::OnOK)
+EVT_BUTTON(kDirButtonId, VdrPrefsDialog::OnDirSelect)
+EVT_CHECKBOX(kLogRotateCheckId, VdrPrefsDialog::OnLogRotateCheck)
+EVT_CHECKBOX(kAutoRecordCheckId, VdrPrefsDialog::OnAutoRecordCheck)
 EVT_CHECKBOX(kUseSpeedThresholdCheckId,
-             VDRPrefsDialog::OnUseSpeedThresholdCheck)
-EVT_CHECKBOX(kNmea0183CheckId, VDRPrefsDialog::OnProtocolCheck)
-EVT_CHECKBOX(kNmea2000CheckId, VDRPrefsDialog::OnProtocolCheck)
-EVT_RADIOBUTTON(kNetworkRadioId, VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
-EVT_RADIOBUTTON(kInternalRadioId, VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
-EVT_RADIOBUTTON(kLoopbackRadioId, VDRPrefsDialog::OnNMEA0183ReplayModeChanged)
+             VdrPrefsDialog::OnUseSpeedThresholdCheck)
+EVT_CHECKBOX(kNmea0183CheckId, VdrPrefsDialog::OnProtocolCheck)
+EVT_CHECKBOX(kNmea2000CheckId, VdrPrefsDialog::OnProtocolCheck)
+EVT_RADIOBUTTON(kNetworkRadioId, VdrPrefsDialog::OnNMEA0183ReplayModeChanged)
+EVT_RADIOBUTTON(kInternalRadioId, VdrPrefsDialog::OnNMEA0183ReplayModeChanged)
+EVT_RADIOBUTTON(kLoopbackRadioId, VdrPrefsDialog::OnNMEA0183ReplayModeChanged)
 END_EVENT_TABLE()
 
-VDRPrefsDialog::VDRPrefsDialog(wxWindow* parent, wxWindowID id,
+VdrPrefsDialog::VdrPrefsDialog(wxWindow* parent, wxWindowID id,
                                VdrDataFormat format,
                                const wxString& recordingDir, bool logRotate,
                                int logRotateInterval, bool autoStartRecording,
@@ -72,11 +72,11 @@ VDRPrefsDialog::VDRPrefsDialog(wxWindow* parent, wxWindowID id,
   Centre();
 }
 
-void VDRPrefsDialog::OnProtocolCheck(wxCommandEvent& event) {
+void VdrPrefsDialog::OnProtocolCheck(wxCommandEvent& event) {
   UpdateControlStates();
 }
 
-void VDRPrefsDialog::UpdateControlStates() {
+void VdrPrefsDialog::UpdateControlStates() {
   // File rotation controls
   m_log_rotate_interval_ctrl->Enable(m_log_rotate_check->GetValue());
 
@@ -92,7 +92,7 @@ void VDRPrefsDialog::UpdateControlStates() {
   m_stop_delay_ctrl->Enable(speed_enabled);
 }
 
-void VDRPrefsDialog::CreateControls() {
+void VdrPrefsDialog::CreateControls() {
   auto* main_sizer = new wxBoxSizer(wxVERTICAL);
   SetSizer(main_sizer);
 
@@ -121,7 +121,7 @@ void VDRPrefsDialog::CreateControls() {
   UpdateControlStates();
 }
 
-wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
+wxPanel* VdrPrefsDialog::CreateRecordingTab(wxWindow* parent) {
   auto* panel = new wxPanel(parent);
   auto* main_sizer = new wxBoxSizer(wxVERTICAL);
 
@@ -251,7 +251,7 @@ wxPanel* VDRPrefsDialog::CreateRecordingTab(wxWindow* parent) {
   return panel;
 }
 
-wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
+wxPanel* VdrPrefsDialog::CreateReplayTab(wxWindow* parent) {
   auto* panel = new wxPanel(parent);
   auto* main_sizer = new wxBoxSizer(wxVERTICAL);
 
@@ -307,7 +307,7 @@ wxPanel* VDRPrefsDialog::CreateReplayTab(wxWindow* parent) {
   return panel;
 }
 
-void VDRPrefsDialog::OnOK(wxCommandEvent& event) {
+void VdrPrefsDialog::OnOK(wxCommandEvent& event) {
   m_format =
       m_csv_radio->GetValue() ? VdrDataFormat::kCsv : VdrDataFormat::kRawNmea;
   m_log_rotate = m_log_rotate_check->GetValue();
@@ -340,7 +340,7 @@ void VDRPrefsDialog::OnOK(wxCommandEvent& event) {
   event.Skip();
 }
 
-void VDRPrefsDialog::OnDirSelect(wxCommandEvent& event) {
+void VdrPrefsDialog::OnDirSelect(wxCommandEvent& event) {
   wxString dir_spec;
   int response = PlatformDirSelectorDialog(
       this, &dir_spec, _("Choose a directory"), m_recording_dir);
@@ -351,19 +351,19 @@ void VDRPrefsDialog::OnDirSelect(wxCommandEvent& event) {
   }
 }
 
-void VDRPrefsDialog::OnLogRotateCheck(wxCommandEvent& event) {
+void VdrPrefsDialog::OnLogRotateCheck(wxCommandEvent& event) {
   UpdateControlStates();
 }
 
-void VDRPrefsDialog::OnAutoRecordCheck(wxCommandEvent& event) {
+void VdrPrefsDialog::OnAutoRecordCheck(wxCommandEvent& event) {
   UpdateControlStates();
 }
 
-void VDRPrefsDialog::OnUseSpeedThresholdCheck(wxCommandEvent& event) {
+void VdrPrefsDialog::OnUseSpeedThresholdCheck(wxCommandEvent& event) {
   UpdateControlStates();
 }
 
-void VDRPrefsDialog::OnNMEA0183ReplayModeChanged(wxCommandEvent& event) {
+void VdrPrefsDialog::OnNMEA0183ReplayModeChanged(wxCommandEvent& event) {
   m_nmea0183_net_panel->Enable(event.GetId() == kNetworkRadioId);
   m_nmea2000_net_panel->Enable(event.GetId() != kLoopbackRadioId);
 }

@@ -35,10 +35,10 @@
  * Provides UI for setting recording format, directory, auto-recording behavior,
  * protocol selection, and file rotation options.
  */
-class VDRPrefsDialog : public wxDialog {
+class VdrPrefsDialog : public wxDialog {
 public:
   /**
-   * Create new preferences dialog.
+   * Create new dialog.
    *
    * Initializes dialog with current VDR configuration settings.
    * @param parent Parent window
@@ -53,7 +53,7 @@ public:
    * @param stopDelay Minutes to wait before stopping
    * @param protocols Active protocol settings
    */
-  VDRPrefsDialog(wxWindow* parent, wxWindowID id, VdrDataFormat format,
+  VdrPrefsDialog(wxWindow* parent, wxWindowID id, VdrDataFormat format,
                  const wxString& recordingDir, bool logRotate,
                  int logRotateInterval, bool autoStartRecording,
                  bool useSpeedThreshold, double speedThreshold, int stopDelay,
