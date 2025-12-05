@@ -25,7 +25,7 @@
 #endif
 
 #include <wx/datetime.h>
-#include <functional>
+#include <wx/string.h>
 
 struct NmeaTimeInfo {
   bool has_date;  // Whether date information is available
@@ -46,6 +46,11 @@ struct TimeSource {
   wxString talker_id;    // GP, GN, etc.
   wxString sentence_id;  // RMC, ZDA, etc.
   int precision;         // Millisecond precision (0, 1, 2, or 3 digits)
+
+  TimeSource() : precision(0) {}
+
+  TimeSource(const wxString& talker, const wxString& sentence, int precision)
+      : talker_id(talker), sentence_id(sentence), precision(precision) {}
 
   bool operator==(const TimeSource& other) const {
     return talker_id == other.talker_id && sentence_id == other.sentence_id &&

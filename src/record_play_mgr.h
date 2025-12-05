@@ -51,7 +51,7 @@ wxDECLARE_EVENT(EVT_SIGNALK, ObservedEvt);
 // Request default positioning of toolbar tool
 static constexpr int kVdrToolPosition = -1;
 
-class VDRControl;
+class VdrControl;
 
 /**
  * Column definition for CSV format files.
@@ -83,34 +83,8 @@ public:
 
   void SetControlGui(VdrControlGui* gui) { m_control_gui = gui; }
 
-  /**
-   * Process timer notification for playback events.
-   *
-   * Handles timed playback of recorded data, managing message timing
-   * and maintaining playback state.
-   */
-  void Notify();
-
-  /**
-   * Set the interval for timer notifications.
-   * @param interval Timer interval in milliseconds
-   */
-  void SetInterval(int interval);
-
   /** Load a VDR file containing NMEA data, either in raw NMEA format or CSV. */
   bool LoadFile(const wxString& filename, wxString* error = nullptr);
-
-  /** Start recording VDR data. */
-  void StartRecording();
-
-  /** Stop recording VDR data and close the VDR file. */
-  void StopRecording(const wxString& reason = "");
-
-  /** Pause recording VDR data, retain the existing VDR file. */
-  void PauseRecording(const wxString& reason = "");
-
-  /** Resume recording using the same VDR file. */
-  void ResumeRecording();
 
   /** Start playback of VDR data. */
   void StartPlayback(wxString& file_status);
@@ -140,83 +114,8 @@ public:
 
   void SetColorScheme(PI_ColorScheme cs);
 
-  /**
-   * Calculate when the current NMEA/SignalK message should be played during
-   * replay.
-   *
-   * This function determines the exact time when the current message should be
-   * displayed, accounting for the playback speed multiplier. The time returned
-   * is in terms of the computer's clock, not the original message timestamps.
-   *
-   * The calculation works by:
-   * 1. Finding how much time elapsed between the first message and current
-   * message
-   * 2. Scaling this elapsed time based on the playback speed (e.g. half-time at
-   * 2x speed)
-   * 3. Adding the scaled time to when playback started
-   *
-   * @return wxDateTime When to play the current message, relative to system
-   * time. Returns invalid wxDateTime if any required timestamps are invalid.
-   *
-   * @see GetSpeedMultiplier() - Controls how fast messages are replayed
-   */
-  wxDateTime GetNextPlaybackTime() const;
-
-  /** Invoked during playback. */
-  void OnTimer(wxTimerEvent& event);
-
-  void ShowPreferencesDialogNative(wxWindow* parent);
   void ShowPreferencesDialog(wxWindow* parent);
-
-  /** Get current data format setting for VDR output */
-  VdrDataFormat GetDataFormat() const { return m_data_format; }
-
-  /**
-   * Set data format for VDR recording.
-   *
-   * If recording is active, stops current recording and starts new one with
-   * updated format.
-   * @param dataFormat New format to use for recording.
-   */
-  void SetDataFormat(VdrDataFormat dataFormat);
-
-  /** Get configured recording directory. */
-  wxString GetRecordingDir() const { return m_recording_dir; }
-
-  /**
-   * Set directory for storing VDR recordings.
-   * @param dir Path to recording directory
-   */
-  void SetRecordingDir(const wxString& dir) { m_recording_dir = dir; }
-
-  /**
-   * Generate filename for new recording based on current UTC time.
-   *
-   * Creates filename in format: vdr_YYYYMMDDTHHMMSSz with appropriate
-   * extension.
-   */
-  wxString GenerateFilename() const;
-
-  /** Check if automatic log rotation is enabled. */
-  bool IsLogRotateEnabled() const { return m_log_rotate; }
-  /**
-   * Enable or disable automatic log rotation.
-   * @param enable True to enable rotation
-   */
-
-  void SetLogRotate(bool enable) { m_log_rotate = enable; }
-  /** Get configured interval between log rotations in hours. */
-
-  int GetLogRotateInterval() const { return m_log_rotate_interval; }
-  /**
-   * Set interval for automatic log rotation.
-   * @param hours Hours between rotations
-   */
-
-  void SetLogRotateInterval(int hours) { m_log_rotate_interval = hours; }
-  /** Check if current recording file needs rotation based on elapsed time. */
-
-  void CheckLogRotation();
+  void ShowPreferencesDialogNative(wxWindow* parent);
 
   /** Update toolbar record and play buttons state. */
   void SetToolbarToolStatus();
@@ -274,7 +173,7 @@ public:
   /**
    * Get path of currently loaded input file.
    *
-   * Returns empty string if no file loaded or file doesn't exist.
+   * Return empty string if no file loaded or file doesn't exist.
    */
   wxString GetInputFile() const;
 
@@ -284,22 +183,101 @@ public:
   /**
    * Adjust playback timing based on speed multiplier setting.
    *
-   * Updates base time to maintain proper message timing when
+   * Update base time to maintain proper message timing when
    * playback speed is changed.
    */
   void AdjustPlaybackBaseTime();
 
-  /** Check if automatic recording start is enabled. */
-  bool IsAutoStartRecording() const { return m_auto_start_recording; }
+  bool IsUsingLoopback() const {
+    return m_protocols.replay_mode == ReplayMode::kLoopback;
+  }
+
+  void OnToolbarToolCallback(int id);
+
+private:
+  class VdrTimer : public wxTimer {
+  public:
+    explicit VdrTimer(RecordPlayMgr* plugin) : m_plugin(plugin) {}
+    void Notify() override { m_plugin->Notify(); }
+
+  private:
+    RecordPlayMgr* m_plugin;
+  };
+  bool LoadConfig();
+  bool SaveConfig();
+
+  /**
+   * Process timer notification for playback events.
+   *
+   * Handles timed playback of recorded data, managing message timing
+   * and maintaining playback state.
+   */
+  void Notify();
+
+  /** Start recording VDR data. */
+  void StartRecording();
+
+  /** Stop recording VDR data and close the VDR file. */
+  void StopRecording(const wxString& reason = "");
+
+  /** Resume recording using the same VDR file. */
+  void ResumeRecording();
+
+  /** Pause recording VDR data, retain the existing VDR file. */
+  void PauseRecording(const wxString& reason = "");
+
+  /** Get current data format setting for VDR output */
+  VdrDataFormat GetDataFormat() const { return m_data_format; }
+
+  /**
+   * Set data format for VDR recording.
+   *
+   * If recording is active, stops current recording and starts new one with
+   * updated format.
+   * @param dataFormat New format to use for recording.
+   */
+  void SetDataFormat(VdrDataFormat dataFormat);
+
+  /**
+   * Set directory for storing VDR recordings.
+   * @param dir Path to recording directory
+   */
+  void SetRecordingDir(const wxString& dir) { m_recording_dir = dir; }
+
+  /** Get configured recording directory. */
+  wxString GetRecordingDir() const { return m_recording_dir; }
+
+  /**
+   * Generate filename for new recording based on current UTC time.
+   *
+   * Creates filename in format: vdr_YYYYMMDDTHHMMSSz with appropriate
+   * extension.
+   */
+  wxString GenerateFilename() const;
+
+  /**
+   * Enable or disable automatic log rotation.
+   * @param enable True to enable rotation
+   */
+  void SetLogRotate(bool enable) { m_log_rotate = enable; }
+
+  /** Check if current recording file needs rotation based on elapsed time. */
+  void CheckLogRotation();
+
+  /** Get configured interval between log rotations in hours. */
+  int GetLogRotateInterval() const { return m_log_rotate_interval; }
+
+  /**
+   * Set interval for automatic log rotation.
+   * @param hours Hours between rotations
+   */
+  void SetLogRotateInterval(int hours) { m_log_rotate_interval = hours; }
 
   /**
    * Enable or disable automatic recording start.
    * @param enable True to enable auto-start
    */
   void SetAutoStartRecording(bool enable) { m_auto_start_recording = enable; }
-
-  /** Check if speed threshold for recording is enabled. */
-  bool IsUseSpeedThreshold() const { return m_use_speed_threshold; }
 
   /**
    * Enable or disable speed threshold for recording.
@@ -335,15 +313,6 @@ public:
    */
   void CheckAutoRecording(double speed);
 
-  /**
-   * Check if current file contains at least one time source with valid message
-   * timestamps.
-   *
-   * The time source must have monotonically increasing timestamps for
-   * timestamp-based playback.
-   */
-  bool HasValidTimestamps() const;
-
   /** Helper function to extract NMEA sentence components. */
   static bool ParseNmeaComponents(wxString nmea, wxString& talkerId,
                                   wxString& sentence_id, bool& hasTimestamp);
@@ -375,15 +344,13 @@ public:
   }
 
   /**
-   * Format an NMEA 2000 message based on current format
+   * Check if current file contains at least one time source with valid message
+   * timestamps.
    *
-   * @param pgn PGN number
-   * @param source Source address
-   * @param payload Raw message payload as hex string
-   * @return Formatted message
+   * The time source must have monotonically increasing timestamps for
+   * timestamp-based playback.
    */
-  static wxString FormatN2KMessage(int pgn, const wxString& source,
-                                   const wxString& payload);
+  bool HasValidTimestamps() const;
 
   /**
    * Get the ConnectionSettings structure for a specific protocol.
@@ -394,32 +361,27 @@ public:
   const ConnectionSettings& GetNetworkSettings(const wxString& protocol) const;
 
   /**
-   * Process a protocol message for playback.
-   * Handles sending via appropriate network server if enabled.
+   * Calculate when the current NMEA/SignalK message should be played during
+   * replay.
    *
-   * @param protocol Protocol type ("NMEA0183", "N2K", "SignalK")
-   * @param message The message to process
-   * @return True if message was processed successfully
+   * This function determines the exact time when the current message should be
+   * displayed, accounting for the playback speed multiplier. The time returned
+   * is in terms of the computer's clock, not the original message timestamps.
+   *
+   * The calculation works by:
+   * 1. Finding how much time elapsed between the first message and current
+   * message
+   * 2. Scaling this elapsed time based on the playback speed (e.g. half-time at
+   * 2x speed)
+   * 3. Adding the scaled time to when playback started
+   *
+   * @return wxDateTime When to play the current message, relative to system
+   * time. Returns invalid wxDateTime if any required timestamps are invalid.
+   *
+   * @see GetSpeedMultiplier() - Controls how fast messages are replayed
    */
-  bool PlaybackMessage(const wxString& protocol, const wxString& message);
+  wxDateTime GetNextPlaybackTime() const;
 
-  bool IsUsingLoopback() const {
-    return m_protocols.replay_mode == ReplayMode::kLoopback;
-  }
-
-  void OnToolbarToolCallback(int id);
-
-private:
-  class VdrTimer : public wxTimer {
-  public:
-    explicit VdrTimer(RecordPlayMgr* plugin) : m_plugin(plugin) {}
-    void Notify() override { m_plugin->Notify(); }
-
-  private:
-    RecordPlayMgr* m_plugin;
-  };
-  bool LoadConfig();
-  bool SaveConfig();
   static wxString FormatNmea0183AsCsv(const wxString& nmea);
   bool ParseCSVHeader(const wxString& header);
 

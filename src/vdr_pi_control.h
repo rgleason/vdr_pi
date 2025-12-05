@@ -35,17 +35,16 @@ class VdrPi;
  * Provides controls for loading VDR files, starting/pausing playback,
  * adjusting playback speed, and monitoring playback progress.
  */
-class VDRControl : public wxWindow, public VdrControlGui {
+class VdrControl : public wxWindow, public VdrControlGui {
 public:
   /**
    * Create a new VDR control panel.
    *
    * Initializes UI elements and loads any previously configured VDR file.
-   * @param pparent Parent window for the control panel
-   * @param id Window identifier
-   * @param vdr Owner VDR plugin instance
+   * @param parent Parent window for the control panel
+   * @param record_play_mgr  Record/play model instance
    */
-  VDRControl(wxWindow* parent, std::shared_ptr<RecordPlayMgr> record_play_mgr);
+  VdrControl(wxWindow* parent, std::shared_ptr<RecordPlayMgr> record_play_mgr);
 
   void SetColorScheme(PI_ColorScheme cs) override;
 
@@ -59,7 +58,7 @@ public:
 
   void UpdateNetworkStatus(const wxString& status) override;
 
-  double GetSpeedMultiplier() const override;
+  [[nodiscard]] double GetSpeedMultiplier() const override;
 
   void OnToolbarToolCallback(int id) override {
     if (m_pvdr) m_pvdr->OnToolbarToolCallback(id);
@@ -70,10 +69,6 @@ public:
 
   void EnableSpeedSlider(bool enable) override {
     m_speed_slider->Enable(enable);
-  }
-
-  void ShowPreferencesDialog(wxWindow* parent) {
-    if (m_pvdr) m_pvdr->ShowPreferencesDialog(parent);
   }
 
   /** Update playback status label with given message. */
@@ -142,7 +137,7 @@ private:
    */
   void StopPlayback();
 
-  bool LoadFile(wxString current_file);
+  bool LoadFile(const wxString& current_file);
 
   wxButton* m_load_btn;          //!< Button to load VDR file
   wxButton* m_settings_btn;      //!< Button to open settings dialog

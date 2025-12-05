@@ -74,7 +74,7 @@ int VdrPi::Init() {
   MockControlGui tmp_gui;
 
   m_record_play_mgr = std::make_shared<RecordPlayMgr>(this, &tmp_gui);
-  m_pvdrcontrol = new VDRControl(wxTheApp->GetTopWindow(), m_record_play_mgr);
+  m_pvdrcontrol = new VdrControl(wxTheApp->GetTopWindow(), m_record_play_mgr);
   SetupControl();
   m_pauimgr->Update();
   m_record_play_mgr->SetControlGui(m_pvdrcontrol);

@@ -120,13 +120,13 @@ public:
 
 private:
   std::shared_ptr<RecordPlayMgr> m_record_play_mgr;
-  VDRControl* m_pvdrcontrol;
+  VdrControl* m_pvdrcontrol;
   wxAuiManager* m_pauimgr;
   wxBitmap m_panelBitmap;
 
   void SetupControl();
   void DestroyControl();
-  VDRControl* GetControl() { return m_pvdrcontrol; }
+  VdrControl* GetControl() { return m_pvdrcontrol; }
 };
 
 #endif

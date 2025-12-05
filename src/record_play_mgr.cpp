@@ -597,7 +597,7 @@ void RecordPlayMgr::Notify() {
   // Keep processing messages until we catch up with scheduled time.
   while (behind_schedule && !m_istream.Eof()) {
     wxString line;
-    int pos = m_istream.GetCurrentLine();
+    int pos = static_cast<int>(m_istream.GetCurrentLine());
 
     if (pos == -1) {
       // First line - check if it's CSV.
@@ -779,6 +779,7 @@ void RecordPlayMgr::OnToolbarToolCallback(int id) {
     } else {
       StartRecording();
       if (m_recording) {
+        // Cannot really happen, remove FIXME (leamas)
         // Only set button state if recording started
         // successfully
         m_recording_manually_disabled = false;
@@ -1134,7 +1135,7 @@ VDRNetworkServer* RecordPlayMgr::GetServer(const wxString& protocol) {
     auto server = std::make_unique<VDRNetworkServer>();
     VDRNetworkServer* serverPtr = server.get();
     m_network_servers[protocol] = std::move(server);
-    return serverPtr;
+    return serverPtr;  // FIXME (leamas) giving away raw pointer
   }
   return it->second.get();
 }
@@ -1269,7 +1270,7 @@ void RecordPlayMgr::SetDataFormat(VdrDataFormat format) {
 }
 
 void RecordPlayMgr::ShowPreferencesDialog(wxWindow* parent) {
-  VDRPrefsDialog dlg(parent, wxID_ANY, m_data_format, m_recording_dir,
+  VdrPrefsDialog dlg(parent, wxID_ANY, m_data_format, m_recording_dir,
                      m_log_rotate, m_log_rotate_interval,
                      m_auto_start_recording, m_use_speed_threshold,
                      m_speed_threshold, m_stop_delay, m_protocols);
@@ -1315,7 +1316,7 @@ void RecordPlayMgr::ShowPreferencesDialog(wxWindow* parent) {
 }
 
 void RecordPlayMgr::ShowPreferencesDialogNative(wxWindow* parent) {
-  VDRPrefsDialog dlg(parent, wxID_ANY, m_data_format, m_recording_dir,
+  VdrPrefsDialog dlg(parent, wxID_ANY, m_data_format, m_recording_dir,
                      m_log_rotate, m_log_rotate_interval,
                      m_auto_start_recording, m_use_speed_threshold,
                      m_speed_threshold, m_stop_delay, m_protocols);
@@ -1565,14 +1566,12 @@ bool RecordPlayMgr::ScanFileTimestamps(bool& has_valid_timestamps,
     int precision = 0;
     int validSentences = 0;
     int invalidSentences = 0;
-    wxString lastInvalidLine;  // Store for error reporting
     while (!m_istream.Eof()) {
       if (!line.IsEmpty()) {
         wxString talkerId, sentenceId;
         bool hasTimestamp;
         if (!ParseNmeaComponents(line, talkerId, sentenceId, hasTimestamp)) {
           invalidSentences++;
-          lastInvalidLine = line;
           line = GetNextNonEmptyLine();
           continue;
         }
@@ -1773,7 +1772,7 @@ bool RecordPlayMgr::SeekToFraction(double fraction) {
           foundPosition = true;
           break;
         }
-        lastTimestamp = timestamp;
+        // lastTimestamp = timestamp;
       }
     }
 
@@ -1857,7 +1856,7 @@ bool RecordPlayMgr::LoadFile(const wxString& filename, wxString* error) {
 
   m_ifilename = filename;
   if (m_protocols.replay_mode == ReplayMode::kLoopback) {
-    m_dm_replay_mgr = std::move(DmReplayMgrFactory());
+    m_dm_replay_mgr = DmReplayMgrFactory();
   }
 
   // Reset all file-related state
