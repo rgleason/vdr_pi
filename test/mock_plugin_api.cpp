@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2024 by OpenCPN development team                        *
+ *   Copyright (C) 2025 Sebastian Rosset                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -12,10 +12,10 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
+
+#include <cstdint>
 
 #ifdef __WINDOWS__
 #include <windows.h>
@@ -135,7 +135,7 @@ std::vector<uint8_t> DECL_EXP GetN2000Payload(NMEA2000Id /* id */,
 }
 
 wxString DECL_EXP GetPluginDataDir(const char *plugin_name) {
-  return wxString("/mock/plugin/data");
+  return wxString(TESTDATA);
 }
 
 // Define the wxAuiManager methods
@@ -157,3 +157,27 @@ wxAuiPaneInfo &wxAuiManager::GetPane(wxWindow *window) {
 }
 
 bool wxAuiPaneInfo::IsValid() const { return true; }
+
+const std::unordered_map<std::string, std::string> GetAttributes(
+    DriverHandle handle) {
+  return {};
+}
+
+int OCPNMessageBox_PlugIn(wxWindow *, wxString const &, wxString const &, int,
+                          int, int) {
+  return 0;
+}
+
+wxBitmap GetBitmapFromSVGFile(wxString, unsigned int, unsigned int) {
+  return {};
+}
+double OCPN_GetWinDIPScaleFactor() { return 1.0; }
+
+double PlugInGetDisplaySizeMM() { return 1.0; }
+
+std::vector<DriverHandle> GetActiveDrivers() { return {}; }
+
+CommDriverResult WriteCommDriver(
+    DriverHandle handle, const std::shared_ptr<std::vector<uint8_t>> &payload) {
+  return static_cast<CommDriverResult>(0);
+}

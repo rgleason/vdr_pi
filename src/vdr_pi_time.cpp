@@ -109,6 +109,7 @@ void TimestampParser::ApplyCachedDate(NmeaTimeInfo& info) const {
 bool TimestampParser::ParseIso8601Timestamp(const wxString& timeStr,
                                             wxDateTime* timestamp) {
   // Expected format: YYYY-MM-DDThh:mm:ss.sssZ
+  timestamp->Set(static_cast<time_t>(0));
 
   // Parse the main date/time part using ISO format
   bool ret = timestamp->ParseFormat(timeStr, "%Y-%m-%dT%H:%M:%S.%l%z");

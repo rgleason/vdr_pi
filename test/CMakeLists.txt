@@ -5,8 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 message(STATUS "Building VDR plugin tests")
 
-enable_testing ()
-
 add_library(win32_libs INTERFACE)
 if (MSVC)
     target_link_libraries(win32_libs
@@ -18,7 +16,9 @@ endif ()
 
 # Find required packages
 find_package(GTest REQUIRED)
-find_package(wxWidgets COMPONENTS core base net REQUIRED)
+find_package(wxWidgets COMPONENTS core base net aui REQUIRED)
+
+add_test(NAME vdr_tests COMMAND vdr_tests)
 
 set(SRC
     time_tests.cpp
@@ -33,6 +33,8 @@ set(SRC
     ${CMAKE_SOURCE_DIR}/src/vdr_pi_control.cpp
     ${CMAKE_SOURCE_DIR}/src/vdr_network.cpp
     ${CMAKE_SOURCE_DIR}/src/icons.cpp
+    ${CMAKE_SOURCE_DIR}/src/record_play_mgr.cpp
+    ${CMAKE_SOURCE_DIR}/src/dm_replay_mgr.cpp
 )
 
 add_executable(vdr_tests ${SRC})
@@ -45,7 +47,7 @@ target_compile_definitions(vdr_tests
 )
 
 # Include directories
-target_include_directories(vdr_tests 
+target_include_directories(vdr_tests
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/opencpn-libs/${PKG_API_LIB}/include
@@ -54,12 +56,13 @@ target_include_directories(vdr_tests
 )
 
 # Link against required libraries
-target_link_libraries(vdr_tests 
-    PRIVATE 
+target_link_libraries(vdr_tests
+    PRIVATE
         GTest::GTest
         GTest::Main
         ${wxWidgets_LIBRARIES}
         ocpn::api
+        csv-parser::csv-parser
 )
 
 # Set optimization level for debug builds
@@ -68,7 +71,6 @@ if (NOT MSVC)
 endif ()
 
 # Add the test
-add_test(NAME vdr_tests COMMAND vdr_tests)
 
 # Add a custom target to run tests with more details
 add_custom_target(run-tests

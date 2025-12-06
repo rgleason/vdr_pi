@@ -55,6 +55,8 @@
 wxDECLARE_EVENT(EVT_N2K, ObservedEvt);
 wxDECLARE_EVENT(EVT_SIGNALK, ObservedEvt);
 
+class VdrControlGui;
+
 // Request default positioning of toolbar tool
 static constexpr int kVdrToolPosition = -1;
 
@@ -199,6 +201,69 @@ public:
 
   void OnToolbarToolCallback(int id);
 
+protected:
+  /**
+   * Check if current file contains at least one time source with valid message
+   * timestamps.
+   *
+   * The time source must have monotonically increasing timestamps for
+   * timestamp-based playback.
+   */
+  bool HasValidTimestamps() const;
+
+  /**
+   * Get details for all available time sources
+   * @return Map of time sources and their details
+   */
+  const std::unordered_map<TimeSource, TimeSourceDetails, TimeSourceHash>&
+  GetTimeSources() const {
+    return m_time_sources;
+  }
+
+  /**
+   * Get the next non-empty line from the input stream. Empty lines are skipped.
+   * A line is considered empty if it contains only whitespace.
+   *
+   * Lines starting with '#' are considered comments and are also skipped.
+   *
+   * @param fromStart If true, starts reading from the beginning of the file.
+   *                 If false, continues from current position.
+   * @return The next non-empty line with leading/trailing whitespace removed,
+   *         or empty string if no more non-empty lines exist or file isn't
+   * open.
+   */
+  wxString GetNextNonEmptyLine(bool fromStart = false);
+
+  /** Helper to flush the sentence buffer to NMEA stream. */
+  void FlushSentenceBuffer();
+
+  /**
+   * Set directory for storing VDR recordings.
+   * @param dir Path to recording directory
+   */
+  void SetRecordingDir(const wxString& dir) { m_recording_dir = dir; }
+
+  /**
+   * Set data format for VDR recording.
+   *
+   * If recording is active, stops current recording and starts new one with
+   * updated format.
+   * @param dataFormat New format to use for recording.
+   */
+  void SetDataFormat(VdrDataFormat dataFormat);
+
+  /**
+   * Enable or disable automatic log rotation.
+   * @param enable True to enable rotation
+   */
+  void SetLogRotate(bool enable) { m_log_rotate = enable; }
+
+  /** Start recording VDR data. */
+  void StartRecording();
+
+  /** Stop recording VDR data and close the VDR file. */
+  void StopRecording(const wxString& reason = "");
+
 private:
   class VdrTimer : public wxTimer {
   public:
@@ -219,12 +284,6 @@ private:
    */
   void Notify();
 
-  /** Start recording VDR data. */
-  void StartRecording();
-
-  /** Stop recording VDR data and close the VDR file. */
-  void StopRecording(const wxString& reason = "");
-
   /** Resume recording using the same VDR file. */
   void ResumeRecording();
 
@@ -233,21 +292,6 @@ private:
 
   /** Get current data format setting for VDR output */
   VdrDataFormat GetDataFormat() const { return m_data_format; }
-
-  /**
-   * Set data format for VDR recording.
-   *
-   * If recording is active, stops current recording and starts new one with
-   * updated format.
-   * @param dataFormat New format to use for recording.
-   */
-  void SetDataFormat(VdrDataFormat dataFormat);
-
-  /**
-   * Set directory for storing VDR recordings.
-   * @param dir Path to recording directory
-   */
-  void SetRecordingDir(const wxString& dir) { m_recording_dir = dir; }
 
   /** Get configured recording directory. */
   wxString GetRecordingDir() const { return m_recording_dir; }
@@ -259,12 +303,6 @@ private:
    * extension.
    */
   wxString GenerateFilename() const;
-
-  /**
-   * Enable or disable automatic log rotation.
-   * @param enable True to enable rotation
-   */
-  void SetLogRotate(bool enable) { m_log_rotate = enable; }
 
   /** Check if current recording file needs rotation based on elapsed time. */
   void CheckLogRotation();
@@ -322,41 +360,6 @@ private:
   static bool ParseNmeaComponents(wxString nmea, wxString& talkerId,
                                   wxString& sentence_id, bool& hasTimestamp);
 
-  /** Helper to flush the sentence buffer to NMEA stream. */
-  void FlushSentenceBuffer();
-
-  /**
-   * Get the next non-empty line from the input stream. Empty lines are skipped.
-   * A line is considered empty if it contains only whitespace.
-   *
-   * Lines starting with '#' are considered comments and are also skipped.
-   *
-   * @param fromStart If true, starts reading from the beginning of the file.
-   *                 If false, continues from current position.
-   * @return The next non-empty line with leading/trailing whitespace removed,
-   *         or empty string if no more non-empty lines exist or file isn't
-   * open.
-   */
-  wxString GetNextNonEmptyLine(bool fromStart = false);
-
-  /**
-   * Get details for all available time sources
-   * @return Map of time sources and their details
-   */
-  const std::unordered_map<TimeSource, TimeSourceDetails, TimeSourceHash>&
-  GetTimeSources() const {
-    return m_time_sources;
-  }
-
-  /**
-   * Check if current file contains at least one time source with valid message
-   * timestamps.
-   *
-   * The time source must have monotonically increasing timestamps for
-   * timestamp-based playback.
-   */
-  bool HasValidTimestamps() const;
-
   /**
    * Get the ConnectionSettings structure for a specific protocol.
    *
@@ -388,11 +391,13 @@ private:
   wxDateTime GetNextPlaybackTime() const;
 
   static wxString FormatNmea0183AsCsv(const wxString& nmea);
+
   bool ParseCSVHeader(const wxString& header);
 
   /** Parse timestamp from a CSV line or raw NMEA sentence. */
   bool ParseCSVLineTimestamp(const wxString& line, wxString* messages,
                              wxDateTime* timestamp);
+
   /** Return true if the message is a NMEA0183 or AIS message */
   static bool IsNmea0183OrAis(const wxString& message);
 
@@ -516,15 +521,21 @@ private:
 
   /** Configuration object for saving/loading settings. */
   wxFileConfig* m_pconfig;
+
   /** Input filename for playback. */
   wxString m_ifilename;
+
   /** Output filename for recording. */
   wxString m_ofilename;
+
   /** Directory where recordings are saved. */
   wxString m_recording_dir;
+
   int m_interval;
+
   /** Flag indicating whether recording is active. */
   bool m_recording;
+
   /**
    * Flag to track if recording is temporarily paused.
    *
