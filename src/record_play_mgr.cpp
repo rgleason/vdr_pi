@@ -16,10 +16,7 @@
  **************************************************************************/
 
 #include <algorithm>
-#include <cstdint>
 #include <cstring>
-#include <map>
-#include <memory>
 #include <typeinfo>
 
 #include "wx/wxprec.h"
@@ -29,18 +26,22 @@
 #endif
 
 #include "wx/app.h"
-#include "wx/tokenzr.h"
 #include "wx/display.h"
+#include "wx/filefn.h"
+#include "wx/filename.h"
+#include "wx/image.h"
+#include "wx/log.h"
+#include "wx/tokenzr.h"
 
-#include "ocpn_plugin.h"
+#include "dm_replay_mgr.h"
 
-#include "record_play_mgr.h"
 #include "commons.h"
-#include "vdr_pi_prefs.h"
+#include "icons.h"
+#include "ocpn_plugin.h"
+#include "record_play_mgr.h"
 #include "vdr_pi_control.h"
 #include "vdr_pi.h"
-#include "icons.h"
-#include "dm_replay_mgr.h"
+#include "vdr_pi_prefs.h"
 
 wxDEFINE_EVENT(EVT_N2K, ObservedEvt);
 wxDEFINE_EVENT(EVT_SIGNALK, ObservedEvt);

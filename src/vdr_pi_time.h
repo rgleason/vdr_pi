@@ -19,6 +19,8 @@
 #ifndef VDR_PI_TIME_H_
 #define VDR_PI_TIME_H_
 
+#include <string>
+
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
 #include <wx/wx.h>

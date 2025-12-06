@@ -28,10 +28,7 @@
 #ifndef VDRPI_H_
 #define VDRPI_H_
 
-#include <deque>
-#include <map>
 #include <memory>
-#include <string>
 
 #include "wx/wxprec.h"
 
@@ -39,19 +36,20 @@
 #include "wx/wx.h"
 #endif
 
+#include <wx/aui/aui.h>
+#include <wx/bitmap.h>
 #include <wx/fileconf.h>
 #include <wx/filepicker.h>
 #include <wx/file.h>
-#include <wx/aui/aui.h>
 #include <wx/string.h>
 
-#include "ocpn_plugin.h"
-#include "vdr_pi_control.h"
-#include "vdr_pi_time.h"
-#include "vdr_network.h"
+#include "commons.h"
 #include "config.h"
 #include "dm_replay_mgr.h"
-#include "commons.h"
+#include "ocpn_plugin.h"
+#include "vdr_network.h"
+#include "vdr_pi_control.h"
+#include "vdr_pi_time.h"
 
 /**
  *  Main plugin class handles the plugin API implementation and top level

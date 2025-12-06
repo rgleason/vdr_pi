@@ -24,10 +24,10 @@
 #include <wx/wx.h>
 #endif
 
+#include <wx/string.h>
+
 #include "ocpn_plugin.h"
 #include "record_play_mgr.h"
-
-class VdrPi;
 
 /**
  * Limited, fully visible GUI interface.

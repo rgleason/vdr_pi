@@ -24,11 +24,7 @@
 
 #include <wx/wx.h>
 #include <wx/socket.h>
-
-// Forward declarations
-class wxSocketServer;
-class wxDatagramSocket;
-class wxSocketEvent;
+#include <wx/string.h>
 
 /**
  * Network server for replaying NMEA messages over TCP or UDP.

@@ -24,8 +24,13 @@
 #include <wx/wx.h>
 #endif
 
+#include <wx/checkbox.h>
 #include <wx/dialog.h>
+#include <wx/event.h>
+#include <wx/panel.h>
+#include <wx/radiobut.h>
 #include <wx/spinctrl.h>
+#include <wx/string.h>
 
 struct ConnectionSettings;
 

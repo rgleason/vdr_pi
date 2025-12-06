@@ -36,8 +36,6 @@ using namespace std::chrono_literals;
 
 static constexpr auto kEpoch = ReplayTimepoint{};  ///< 1/1 1970
 
-// static constexpr uint64_t kMaxUint64 = std::numeric_limits<uint64_t>::max();
-
 static const char* const kNoDriverMessage =
     _(R"(I cannot find any loopback driver and is thus unable
 to replay VDR data. The probable cause is that OpenCPN

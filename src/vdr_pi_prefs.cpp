@@ -16,12 +16,15 @@
  **************************************************************************/
 #include <cstdint>
 
+#include <wx/log.h>
 #include <wx/notebook.h>
+#include <wx/sizer.h>
+#include <wx/statbox.h>
+
+#include "vdr_pi_prefs.h"
 
 #include "ocpn_plugin.h"
-
 #include "vdr_pi_prefs_net.h"
-#include "vdr_pi_prefs.h"
 
 static const int kInternalRadioId = wxWindow::NewControlId();
 static const int kLoopbackRadioId = wxWindow::NewControlId();

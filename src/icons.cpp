@@ -8,7 +8,9 @@
 #endif
 
 #include <wx/filename.h>
+#include <wx/log.h>
 #include <wx/mstream.h>
+#include <wx/string.h>
 
 #include "ocpn_plugin.h"
 #include "icons.h"

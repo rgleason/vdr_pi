@@ -23,8 +23,15 @@
 #include <wx/wx.h>
 #endif
 
+#include <wx/button.h>
+#include <wx/checkbox.h>
 #include <wx/dialog.h>
+#include <wx/event.h>
+#include <wx/panel.h>
+#include <wx/radiobut.h>
 #include <wx/spinctrl.h>
+#include <wx/string.h>
+#include <wx/textctrl.h>
 
 #include "vdr_pi_prefs_net.h"
 #include "commons.h"

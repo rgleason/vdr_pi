@@ -18,6 +18,15 @@
 
 #include <cstdint>
 
+#include <wx/bmpbuttn.h>
+#include <wx/colour.h>
+#include <wx/dcclient.h>
+#include <wx/display.h>
+#include <wx/gdicmn.h>
+#include <wx/sizer.h>
+#include <wx/slider.h>
+#include <wx/statbox.h>
+
 #include "vdr_pi_control.h"
 #include "vdr_pi.h"
 #include "icons.h"

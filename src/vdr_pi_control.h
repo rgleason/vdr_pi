@@ -19,15 +19,22 @@
 #ifndef VDR_PI_CONTROL_H_
 #define VDR_PI_CONTROL_H_
 
+#include <memory>
+
 #include <wx/wxprec.h>
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
 #endif
 
+#include <wx/button.h>
+#include <wx/event.h>
+#include <wx/slider.h>
+#include <wx/stattext.h>
+#include <wx/string.h>
+#include <wx/window.h>
+
 #include "ocpn_plugin.h"
 #include "record_play_mgr.h"
-
-class VdrPi;
 
 /**
  * UI control panel for VDR playback functionality.

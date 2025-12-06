@@ -17,12 +17,16 @@
 #include <cstdint>
 
 #include <wx/app.h>
-
-#include "ocpn_plugin.h"
+#include <wx/filename.h>
+#include <wx/gdicmn.h>
+#include <wx/image.h>
+#include <wx/log.h>
 
 #include "vdr_pi.h"
-#include "icons.h"
+
 #include "commons.h"
+#include "icons.h"
+#include "ocpn_plugin.h"
 
 // class factories, used to create and destroy instances of the PlugIn
 

@@ -16,6 +16,9 @@
  **************************************************************************/
 #include <cstdint>
 
+#include <wx/sizer.h>
+#include <wx/statbox.h>
+
 #include "vdr_pi_prefs.h"
 
 ConnectionSettingsPanel::ConnectionSettingsPanel(

@@ -20,10 +20,11 @@
 
 #include <cstdint>
 #include <deque>
-#include <functional>
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "wx/wxprec.h"
 
@@ -31,27 +32,31 @@
 #include "wx/wx.h"
 #endif
 
-#include <wx/fileconf.h>
-#include <wx/filepicker.h>
-#include <wx/file.h>
+#include <wx/arrstr.h>
 #include <wx/aui/aui.h>
+#include <wx/bitmap.h>
+#include <wx/datetime.h>
+#include <wx/event.h>
+#include <wx/fileconf.h>
+#include <wx/file.h>
+#include <wx/filepicker.h>
 #include <wx/string.h>
+#include <wx/textfile.h>
+#include <wx/timer.h>
 
-#include "ocpn_plugin.h"
-#include "vdr_pi_time.h"
-#include "vdr_network.h"
-#include "config.h"
-#include "dm_replay_mgr.h"
 #include "commons.h"
+#include "config.h"
 #include "control_gui.h"
+#include "dm_replay_mgr.h"
+#include "ocpn_plugin.h"
+#include "vdr_network.h"
+#include "vdr_pi_time.h"
 
 wxDECLARE_EVENT(EVT_N2K, ObservedEvt);
 wxDECLARE_EVENT(EVT_SIGNALK, ObservedEvt);
 
 // Request default positioning of toolbar tool
 static constexpr int kVdrToolPosition = -1;
-
-class VdrControl;
 
 /**
  * Column definition for CSV format files.
