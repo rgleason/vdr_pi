@@ -27,13 +27,15 @@
 #include <wx/string.h>
 
 #include "ocpn_plugin.h"
-#include "record_play_mgr.h"
 
 /**
  * Limited, fully visible GUI interface.
  */
 class VdrControlGui {
 public:
+  VdrControlGui() = default;
+  virtual ~VdrControlGui() = default;
+
   virtual void SetColorScheme(PI_ColorScheme cs) = 0;
 
   /**
@@ -60,11 +62,11 @@ public:
   virtual double GetSpeedMultiplier() const = 0;
 };
 
-
 /** Empty implementation, does nothing. */
 class MockControlGui : public VdrControlGui {
 public:
   MockControlGui() {}
+  virtual ~MockControlGui() = default;
 
   void SetColorScheme(PI_ColorScheme cs) override {}
 

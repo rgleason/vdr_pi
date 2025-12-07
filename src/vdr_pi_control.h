@@ -68,7 +68,7 @@ public:
   [[nodiscard]] double GetSpeedMultiplier() const override;
 
   void OnToolbarToolCallback(int id) override {
-    if (m_pvdr) m_pvdr->OnToolbarToolCallback(id);
+    if (m_record_play_mgr) m_record_play_mgr->OnToolbarToolCallback(id);
   }
 
   /** Update displayed timestamp in UI based on current playback position. */
@@ -114,7 +114,7 @@ private:
    *
    * Temporarily pauses playback while user drags position slider.
    */
-  void OnProgressSliderUpdated(wxScrollWinEvent& even);
+  void OnProgressSliderUpdated(wxScrollWinEvent& event);
 
   /**
    * Handle progress slider release.
@@ -157,7 +157,7 @@ private:
   wxSlider* m_progress_slider;  //!< Slider control for playback position
   wxStaticText* m_file_label;   //!< Label showing current filename
   wxStaticText* m_time_label;   //!< Label showing current timestamp
-  std::shared_ptr<RecordPlayMgr> m_pvdr;
+  std::shared_ptr<RecordPlayMgr> m_record_play_mgr;
 
   bool m_is_dragging;              //!< Flag indicating progress slider drag
   bool m_was_playing_before_drag;  //!< Playback state before drag started

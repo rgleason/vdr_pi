@@ -39,7 +39,6 @@
 #include <wx/event.h>
 #include <wx/fileconf.h>
 #include <wx/file.h>
-#include <wx/filepicker.h>
 #include <wx/string.h>
 #include <wx/textfile.h>
 #include <wx/timer.h>
@@ -54,8 +53,6 @@
 
 wxDECLARE_EVENT(EVT_N2K, ObservedEvt);
 wxDECLARE_EVENT(EVT_SIGNALK, ObservedEvt);
-
-class VdrControlGui;
 
 // Request default positioning of toolbar tool
 static constexpr int kVdrToolPosition = -1;
@@ -226,13 +223,13 @@ protected:
    *
    * Lines starting with '#' are considered comments and are also skipped.
    *
-   * @param fromStart If true, starts reading from the beginning of the file.
+   * @param from_start If true, starts reading from the beginning of the file.
    *                 If false, continues from current position.
    * @return The next non-empty line with leading/trailing whitespace removed,
    *         or empty string if no more non-empty lines exist or file isn't
    * open.
    */
-  wxString GetNextNonEmptyLine(bool fromStart = false);
+  wxString GetNextNonEmptyLine(bool from_start = false);
 
   /** Helper to flush the sentence buffer to NMEA stream. */
   void FlushSentenceBuffer();
@@ -357,8 +354,8 @@ private:
   void CheckAutoRecording(double speed);
 
   /** Helper function to extract NMEA sentence components. */
-  static bool ParseNmeaComponents(wxString nmea, wxString& talkerId,
-                                  wxString& sentence_id, bool& hasTimestamp);
+  static bool ParseNmeaComponents(wxString nmea, wxString& talker_id,
+                                  wxString& sentence_id, bool& has_timestamp);
 
   /**
    * Get the ConnectionSettings structure for a specific protocol.
@@ -424,7 +421,7 @@ private:
    * @param protocol Protocol identifier
    * @return Pointer to server instance
    */
-  VDRNetworkServer* GetServer(const wxString& protocol);
+  VdrNetworkServer* GetServer(const wxString& protocol);
 
   /**
    * Parse a PCDIN message into its components
@@ -520,10 +517,10 @@ private:
   std::unique_ptr<DataMonitorReplayMgr> m_dm_replay_mgr;
 
   /** Configuration object for saving/loading settings. */
-  wxFileConfig* m_pconfig;
+  wxFileConfig* m_config;
 
   /** Input filename for playback. */
-  wxString m_ifilename;
+  wxString m_input_file;
 
   /** Output filename for recording. */
   wxString m_ofilename;
@@ -563,7 +560,7 @@ private:
   VdrProtocolSettings m_protocols;
 
   /** Network servers for each protocol */
-  std::map<wxString, std::unique_ptr<VDRNetworkServer>> m_network_servers;
+  std::map<wxString, std::unique_ptr<VdrNetworkServer>> m_network_servers;
 
   /** Input file stream for playback. */
   wxTextFile m_istream;

@@ -30,23 +30,21 @@ static const int kInternalRadioId = wxWindow::NewControlId();
 static const int kLoopbackRadioId = wxWindow::NewControlId();
 static const int kNetworkRadioId = wxWindow::NewControlId();
 
-VdrPrefsDialog::VdrPrefsDialog(wxWindow* parent, wxWindowID id,
-                               VdrDataFormat format,
-                               const wxString& recordingDir, bool logRotate,
-                               int logRotateInterval, bool autoStartRecording,
-                               bool useSpeedThreshold, double speedThreshold,
-                               int stopDelay,
-                               const VdrProtocolSettings& protocols)
+VdrPrefsDialog::VdrPrefsDialog(
+    wxWindow* parent, wxWindowID id, VdrDataFormat format,
+    const wxString& recordingDir, bool log_rotate, int log_rotate_interval,
+    bool auto_start_recording, bool use_speed_threshold, double speed_threshold,
+    int stop_delay, const VdrProtocolSettings& protocols)
     : wxDialog(parent, id, _("VDR Preferences"), wxDefaultPosition,
                wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
       m_format(format),
       m_recording_dir(recordingDir),
-      m_log_rotate(logRotate),
-      m_log_rotate_interval(logRotateInterval),
-      m_auto_start_recording(autoStartRecording),
-      m_use_speed_threshold(useSpeedThreshold),
-      m_speed_threshold(speedThreshold),
-      m_stop_delay(stopDelay),
+      m_log_rotate(log_rotate),
+      m_log_rotate_interval(log_rotate_interval),
+      m_auto_start_recording(auto_start_recording),
+      m_use_speed_threshold(use_speed_threshold),
+      m_speed_threshold(speed_threshold),
+      m_stop_delay(stop_delay),
       m_protocols(protocols) {
   CreateControls();
   GetSizer()->Fit(this);
@@ -63,7 +61,7 @@ void VdrPrefsDialog::UpdateControlStates() {
   m_log_rotate_interval_ctrl->Enable(m_log_rotate_check->GetValue());
 
   // Auto-recording controls
-  bool auto_record_enabled = m_autoStartRecordingCheck->GetValue();
+  bool auto_record_enabled = m_auto_start_recording_check_->GetValue();
   m_use_speed_threshold_check->Enable(auto_record_enabled);
 
   // Speed threshold controls - only enabled if both auto-record and use-speed
@@ -205,13 +203,13 @@ wxPanel* VdrPrefsDialog::CreateRecordingTab(wxWindow* parent) {
   auto* auto_sizer = new wxStaticBoxSizer(auto_box, wxVERTICAL);
 
   // Auto-start option
-  m_autoStartRecordingCheck =
+  m_auto_start_recording_check_ =
       new wxCheckBox(panel, wxID_ANY, _("Automatically start recording"));
-  m_autoStartRecordingCheck->SetValue(m_auto_start_recording);
-  m_autoStartRecordingCheck->Bind(
+  m_auto_start_recording_check_->SetValue(m_auto_start_recording);
+  m_auto_start_recording_check_->Bind(
       wxEVT_CHECKBOX, [&](wxCommandEvent ev) { OnAutoRecordCheck(ev); });
 
-  auto_sizer->Add(m_autoStartRecordingCheck, 0, wxALL, 5);
+  auto_sizer->Add(m_auto_start_recording_check_, 0, wxALL, 5);
 
   // Speed threshold option
   auto* speed_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -321,7 +319,7 @@ void VdrPrefsDialog::OnOK(wxCommandEvent& event) {
       m_csv_radio->GetValue() ? VdrDataFormat::kCsv : VdrDataFormat::kRawNmea;
   m_log_rotate = m_log_rotate_check->GetValue();
   m_log_rotate_interval = m_log_rotate_interval_ctrl->GetValue();
-  m_auto_start_recording = m_autoStartRecordingCheck->GetValue();
+  m_auto_start_recording = m_auto_start_recording_check_->GetValue();
   m_use_speed_threshold = m_use_speed_threshold_check->GetValue();
   m_speed_threshold = m_speed_threshold_ctrl->GetValue();
   m_stop_delay = m_stop_delay_ctrl->GetValue();

@@ -20,7 +20,6 @@
 #define VDR_NETWORK_H_
 
 #include <vector>
-#include <memory>
 
 #include <wx/wx.h>
 #include <wx/socket.h>
@@ -33,13 +32,13 @@
  * and broadcast messages to connected clients. For TCP, maintains a list of
  * connected clients. For UDP, broadcasts to localhost on the specified port.
  */
-class VDRNetworkServer : public wxEvtHandler {
+class VdrNetworkServer : public wxEvtHandler {
 public:
   /** Constructor initializes server state. */
-  VDRNetworkServer();
+  VdrNetworkServer();
 
   /** Destructor ensures proper cleanup of sockets. */
-  ~VDRNetworkServer() override;
+  ~VdrNetworkServer() override;
 
   /**
    * Start the network server.
@@ -106,12 +105,12 @@ private:
   bool SendImpl(const void* data, size_t length);
 
 private:
-  wxSocketServer* m_tcpServer;              //!< TCP server socket
-  wxDatagramSocket* m_udpSocket;            //!< UDP socket
-  std::vector<wxSocketBase*> m_tcpClients;  //!< Connected TCP clients
-  bool m_running;                           //!< Server running state
-  bool m_useTCP;                            //!< Current protocol
-  int m_port;                               //!< Current port
+  wxSocketServer* m_tcp_server;              //!< TCP server socket
+  wxDatagramSocket* m_udp_socket;            //!< UDP socket
+  std::vector<wxSocketBase*> m_tcp_clients;  //!< Connected TCP clients
+  bool m_running;                            //!< Server running state
+  bool m_useTCP;                             //!< Current protocol
+  int m_port;                                //!< Current port
 
   static constexpr int kDefaultPort = 10111;  //!< Default NMEA port
 };

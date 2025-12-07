@@ -85,22 +85,22 @@ public:
   /**
    * Parse a timestamp from an ISO 8601 formatted string in UTC format.
    *
-   * @param timeStr ISO 8601 timestamp string.
+   * @param time_str ISO 8601 timestamp string.
    * @param timestamp Output timestamp in UTC.
    * @return True if the timestamp was successfully parsed.
    */
-  static bool ParseIso8601Timestamp(const wxString& timeStr,
+  static bool ParseIso8601Timestamp(const wxString& time_str,
                                     wxDateTime* timestamp);
 
   // Reset the cached date state
   void Reset();
 
   /** Parses HHMMSS or HHMMSS.sss format. */
-  static bool ParseTimeField(const wxString& timeStr, NmeaTimeInfo& info,
+  static bool ParseTimeField(const wxString& time_str, NmeaTimeInfo& info,
                              int& precision);
 
   /** Set the desired primary time source. */
-  void SetPrimaryTimeSource(const wxString& talkerId, const wxString& msgType,
+  void SetPrimaryTimeSource(const wxString& talker_id, const wxString& msg_type,
                             int precision);
   /** Disable the desired primary time source, parse all sentences containing
    * timestamps. */
@@ -131,12 +131,12 @@ private:
    * When true, timestamps are parsed only if they match the primary time source
    * (talker ID, message type and time precision).
    */
-  bool m_useOnlyPrimarySource{false};
+  bool m_use_only_primary_source{false};
   /** Primary time source used when m_useOnlyPrimarySource is true. */
   TimeSource m_primary_source;
 
   // Parses DDMMYY format (used by RMC)
-  bool ParseRMCDate(const wxString& dateStr, NmeaTimeInfo& info);
+  bool ParseRMCDate(const wxString& date_str, NmeaTimeInfo& info);
 
   // Validates date components and sets hasDate flag
   bool ValidateAndSetDate(NmeaTimeInfo& info);

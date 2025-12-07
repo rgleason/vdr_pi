@@ -67,7 +67,7 @@ void RecordPlayMgr::Init() {
   m_timer = new VdrTimer(this);
 
   //  Get a pointer to the opencpn configuration object
-  m_pconfig = GetOCPNConfigObject();
+  m_config = GetOCPNConfigObject();
 
   //  Load the configuration items
   LoadConfig();
@@ -421,19 +421,19 @@ void RecordPlayMgr::SetNMEASentence(wxString& sentence) {
   // Check if we need to rotate the VDR file.
   CheckLogRotation();
 
-  wxString normalizedSentence = sentence;
-  normalizedSentence.Trim(true);
+  wxString normalized_sentence = sentence;
+  normalized_sentence.Trim(true);
 
   switch (m_data_format) {
     case VdrDataFormat::kCsv:
-      m_ostream.Write(FormatNmea0183AsCsv(normalizedSentence));
+      m_ostream.Write(FormatNmea0183AsCsv(normalized_sentence));
       break;
     case VdrDataFormat::kRawNmea:
     default:
-      if (!normalizedSentence.EndsWith("\r\n")) {
-        normalizedSentence += "\r\n";
+      if (!normalized_sentence.EndsWith("\r\n")) {
+        normalized_sentence += "\r\n";
       }
-      m_ostream.Write(normalizedSentence);
+      m_ostream.Write(normalized_sentence);
       break;
   }
 }
@@ -507,9 +507,9 @@ void RecordPlayMgr::CheckAutoRecording(double speed) {
             "Speed dropped below threshold, starting pause delay timer");
       } else {
         // Check if enough time has passed
-        wxTimeSpan timeBelow =
+        wxTimeSpan time_below =
             wxDateTime::Now().ToUTC() - m_below_threshold_since;
-        if (timeBelow.GetMinutes() >= m_stop_delay) {
+        if (time_below.GetMinutes() >= m_stop_delay) {
           wxLogMessage(
               "Pause recording, speed %.2f below threshold %.2f for %d minutes",
               speed, m_speed_threshold, m_stop_delay);
@@ -628,17 +628,17 @@ void RecordPlayMgr::Notify() {
     // Parse the line according to detected format (CSV or raw NMEA/AIS).
     wxDateTime timestamp;
     wxString nmea;
-    bool msgHasTimestamp = false;
+    bool msg_has_timestamp = false;
 
     if (m_is_csv_file) {
       bool success = ParseCSVLineTimestamp(line, &nmea, &timestamp);
       if (success) {
         nmea += "\r\n";
-        msgHasTimestamp = true;
+        msg_has_timestamp = true;
       }
     } else {
       nmea = line + "\r\n";
-      msgHasTimestamp =
+      msg_has_timestamp =
           m_timestamp_parser.ParseTimestamp(line, timestamp, precision);
     }
 
@@ -651,7 +651,7 @@ void RecordPlayMgr::Notify() {
       // Send through network if enabled.
       HandleNetworkPlayback(nmea);
 
-      if (msgHasTimestamp) {
+      if (msg_has_timestamp) {
         // The current sentence has a timestamp from the primary time source.
         m_current_timestamp = timestamp;
         target_time = GetNextPlaybackTime();
@@ -661,9 +661,9 @@ void RecordPlayMgr::Notify() {
           // Before scheduling next update, flush our sentence buffer.
           FlushSentenceBuffer();
           // Schedule next notification.
-          wxTimeSpan waitTime = target_time - now;
+          wxTimeSpan wait_time = target_time - now;
           m_timer->Start(
-              static_cast<int>(waitTime.GetMilliseconds().ToDouble()),
+              static_cast<int>(wait_time.GetMilliseconds().ToDouble()),
               wxTIMER_ONE_SHOT);
         }
       } else if (!HasValidTimestamps() &&
@@ -718,12 +718,12 @@ wxDateTime RecordPlayMgr::GetNextPlaybackTime() const {
     return {};  // Return invalid time if we don't have valid timestamps
   }
   // Calculate when this message should be played relative to playback start.
-  wxTimeSpan elapsedTime = m_current_timestamp - m_first_timestamp;
-  wxLongLong ms = elapsedTime.GetMilliseconds();
-  double scaledMs = ms.ToDouble() / GetSpeedMultiplier();
-  wxTimeSpan scaledElapsed =
-      wxTimeSpan::Milliseconds(static_cast<long>(scaledMs));
-  return m_playback_base_time + scaledElapsed;
+  wxTimeSpan elapsed_time = m_current_timestamp - m_first_timestamp;
+  wxLongLong ms = elapsed_time.GetMilliseconds();
+  double scaled_ms = ms.ToDouble() / GetSpeedMultiplier();
+  wxTimeSpan scaled_elapsed =
+      wxTimeSpan::Milliseconds(static_cast<long>(scaled_ms));
+  return m_playback_base_time + scaled_elapsed;
 }
 
 void RecordPlayMgr::OnToolbarToolCallback(int id) {
@@ -832,24 +832,24 @@ wxString RecordPlayMgr::GenerateFilename() const {
 }
 
 bool RecordPlayMgr::LoadConfig() {
-  auto* config = (wxFileConfig*)m_pconfig;
+  auto* config = (wxFileConfig*)m_config;
 
   if (!config) return false;
 
   config->SetPath("/PlugIns/VDR");
-  config->Read("InputFilename", &m_ifilename, "");
+  config->Read("InputFilename", &m_input_file, "");
   config->Read("OutputFilename", &m_ofilename, "");
 
   // Default directory handling based on platform
 #ifdef __ANDROID__
-  wxString defaultDir =
+  wxString default_dir =
       "/storage/emulated/0/Android/data/org.opencpn.opencpn/files";
 #else
-  wxString defaultDir = *GetpPrivateApplicationDataLocation();
+  wxString default_dir = *GetpPrivateApplicationDataLocation();
 #endif
 
   // Recording preferences.
-  config->Read("RecordingDirectory", &m_recording_dir, defaultDir);
+  config->Read("RecordingDirectory", &m_recording_dir, default_dir);
   config->Read("Interval", &m_interval, 1000);
   config->Read("LogRotate", &m_log_rotate, false);
   config->Read("LogRotateInterval", &m_log_rotate_interval, 24);
@@ -868,10 +868,10 @@ bool RecordPlayMgr::LoadConfig() {
   m_data_format = static_cast<VdrDataFormat>(format);
 
   // Replay preferences.
-  int replayMode;
-  config->Read("NMEA0183ReplayMode", &replayMode,
+  int replay_mode;
+  config->Read("NMEA0183ReplayMode", &replay_mode,
                static_cast<int>(ReplayMode::kInternalApi));
-  m_protocols.replay_mode = static_cast<ReplayMode>(replayMode);
+  m_protocols.replay_mode = static_cast<ReplayMode>(replay_mode);
 
   // NMEA 0183 network settings
   config->Read("NMEA0183_UseTCP", &m_protocols.nmea0183Net.use_tcp, false);
@@ -894,14 +894,14 @@ bool RecordPlayMgr::LoadConfig() {
 }
 
 bool RecordPlayMgr::SaveConfig() {
-  auto* config = (wxFileConfig*)m_pconfig;
+  auto* config = (wxFileConfig*)m_config;
 
   if (!config) return false;
 
   config->SetPath("/PlugIns/VDR");
 
   // Recording preferences.
-  config->Write("InputFilename", m_ifilename);
+  config->Write("InputFilename", m_input_file);
   config->Write("OutputFilename", m_ofilename);
   config->Write("RecordingDirectory", m_recording_dir);
   config->Write("Interval", m_interval);
@@ -1041,12 +1041,12 @@ void RecordPlayMgr::AdjustPlaybackBaseTime() {
 }
 
 void RecordPlayMgr::StartPlayback(wxString& file_status) {
-  if (m_ifilename.IsEmpty()) {
+  if (m_input_file.IsEmpty()) {
     file_status = _("No file selected.");
     // m_control_gui->UpdateFileStatus(_("No file selected."));
     return;
   }
-  if (!wxFileExists(m_ifilename)) {
+  if (!wxFileExists(m_input_file)) {
     file_status = _("File does not exist.");
     // m_control_gui->UpdateFileStatus(_("File does not exist."));
     return;
@@ -1068,7 +1068,7 @@ void RecordPlayMgr::StartPlayback(wxString& file_status) {
   AdjustPlaybackBaseTime();
 
   if (!m_istream.IsOpened()) {
-    if (!m_istream.Open(m_ifilename)) {
+    if (!m_istream.Open(m_input_file)) {
       file_status = _("Failed to open file.");
       // m_control_gui->UpdateFileStatus(_("Failed to open file."));
       return;
@@ -1087,11 +1087,11 @@ void RecordPlayMgr::StartPlayback(wxString& file_status) {
   if (m_control_gui) {
     m_control_gui->SetProgress(GetProgressFraction());
     m_control_gui->UpdateControls();
-    m_control_gui->UpdateFileLabel(m_ifilename);
+    m_control_gui->UpdateFileLabel(m_input_file);
   }
   wxLogMessage(
       "Start playback from file: %s. Progress: %.2f. Has timestamps: %d",
-      m_ifilename, GetProgressFraction(), m_has_timestamps);
+      m_input_file, GetProgressFraction(), m_has_timestamps);
   // Process first line immediately.
   m_istream.GoToLine(-1);
 
@@ -1129,12 +1129,12 @@ void RecordPlayMgr::StopPlayback() {
   }
 }
 
-VDRNetworkServer* RecordPlayMgr::GetServer(const wxString& protocol) {
+VdrNetworkServer* RecordPlayMgr::GetServer(const wxString& protocol) {
   auto it = m_network_servers.find(protocol);
   if (it == m_network_servers.end()) {
     // Create new server instance if it doesn't exist.
-    auto server = std::make_unique<VDRNetworkServer>();
-    VDRNetworkServer* serverPtr = server.get();
+    auto server = std::make_unique<VdrNetworkServer>();
+    VdrNetworkServer* serverPtr = server.get();
     m_network_servers[protocol] = std::move(server);
     return serverPtr;  // FIXME (leamas) giving away raw pointer
   }
@@ -1147,7 +1147,7 @@ bool RecordPlayMgr::InitializeNetworkServers() {
 
   // Initialize NMEA0183 network server if needed
   if (m_protocols.nmea0183Net.enabled) {
-    VDRNetworkServer* server = GetServer("NMEA0183");
+    VdrNetworkServer* server = GetServer("NMEA0183");
     if (!server->IsRunning() ||
         server->IsTCP() != m_protocols.nmea0183Net.use_tcp ||
         server->GetPort() != m_protocols.nmea0183Net.port) {
@@ -1164,7 +1164,7 @@ bool RecordPlayMgr::InitializeNetworkServers() {
       }
     }
   } else {
-    VDRNetworkServer* server = GetServer("NMEA0183");
+    VdrNetworkServer* server = GetServer("NMEA0183");
     if (server->IsRunning()) {
       server->Stop();
       wxLogMessage("Stopped NMEA0183 network server (disabled in preferences)");
@@ -1173,7 +1173,7 @@ bool RecordPlayMgr::InitializeNetworkServers() {
 
   // Initialize NMEA2000 network server if needed
   if (m_protocols.n2kNet.enabled) {
-    VDRNetworkServer* server = GetServer("N2K");
+    VdrNetworkServer* server = GetServer("N2K");
     if (!server->IsRunning() || server->IsTCP() != m_protocols.n2kNet.use_tcp ||
         server->GetPort() != m_protocols.n2kNet.port) {
       server->Stop();  // Stop existing server if running
@@ -1189,7 +1189,7 @@ bool RecordPlayMgr::InitializeNetworkServers() {
       }
     }
   } else {
-    VDRNetworkServer* server = GetServer("N2K");
+    VdrNetworkServer* server = GetServer("N2K");
     if (server->IsRunning()) {
       server->Stop();
       wxLogMessage("Stopped NMEA2000 network server (disabled in preferences)");
@@ -1209,7 +1209,7 @@ bool RecordPlayMgr::InitializeNetworkServers() {
 
 void RecordPlayMgr::StopNetworkServers() {
   // Stop NMEA0183 server if running
-  if (VDRNetworkServer* server = GetServer("NMEA0183")) {
+  if (VdrNetworkServer* server = GetServer("NMEA0183")) {
     if (server->IsRunning()) {
       server->Stop();
       wxLogMessage("Stopped NMEA0183 network server");
@@ -1217,7 +1217,7 @@ void RecordPlayMgr::StopNetworkServers() {
   }
 
   // Stop NMEA2000 server if running
-  if (VDRNetworkServer* server = GetServer("N2K")) {
+  if (VdrNetworkServer* server = GetServer("N2K")) {
     if (server->IsRunning()) {
       server->Stop();
       wxLogMessage("Stopped NMEA2000 network server");
@@ -1229,7 +1229,7 @@ void RecordPlayMgr::HandleNetworkPlayback(const wxString& data) {
   // For NMEA 0183 data
   if (m_protocols.nmea0183Net.enabled &&
       (data.StartsWith("$") || data.StartsWith("!"))) {
-    VDRNetworkServer* server = GetServer("NMEA0183");
+    VdrNetworkServer* server = GetServer("NMEA0183");
     if (server && server->IsRunning()) {
       server->SendText(data);  // Use SendText() for NMEA messages
     }
@@ -1240,7 +1240,7 @@ void RecordPlayMgr::HandleNetworkPlayback(const wxString& data) {
             data.StartsWith("!AIVDM") ||   // Actisense ASCII
             data.StartsWith("$MXPGN") ||   // MiniPlex
             data.StartsWith("$YDRAW"))) {  // YD RAW
-    VDRNetworkServer* server = GetServer("N2K");
+    VdrNetworkServer* server = GetServer("N2K");
     if (server && server->IsRunning()) {
       server->SendText(data);  // Use SendText() for text-based formats
     }
@@ -1256,13 +1256,13 @@ void RecordPlayMgr::SetDataFormat(VdrDataFormat format) {
   if (m_recording) {
     // If recording is active, we need to handle the transition,
     // e.g., from CSV to raw NMEA. A new file will be created.
-    wxDateTime recordingStart = m_recording_start;
-    wxString currentDir = m_recording_dir;
+    wxDateTime recording_start = m_recording_start;
+    wxString current_dir = m_recording_dir;
     StopRecording("Changing output data format");
     m_data_format = format;
     // Start new recording
-    m_recording_start = recordingStart;  // Preserve original start time
-    m_recording_dir = currentDir;
+    m_recording_start = recording_start;  // Preserve original start time
+    m_recording_dir = current_dir;
     StartRecording();
   } else {
     // Simply update the format if not recording.
@@ -1288,8 +1288,8 @@ void RecordPlayMgr::ShowPreferencesDialog(wxWindow* parent) {
 #endif
 
   if (dlg.ShowModal() == wxID_OK) {
-    bool previousNMEA2000State = m_protocols.nmea2000;
-    bool previousSignalKState = m_protocols.signalK;
+    bool previous_nmea2000_state = m_protocols.nmea2000;
+    bool previous_signal_k_state = m_protocols.signalK;
     SetDataFormat(dlg.GetDataFormat());
     SetRecordingDir(dlg.GetRecordingDir());
     SetLogRotate(dlg.GetLogRotate());
@@ -1302,10 +1302,10 @@ void RecordPlayMgr::ShowPreferencesDialog(wxWindow* parent) {
     SaveConfig();
 
     // Update NMEA 2000 listeners if the setting changed
-    if (previousNMEA2000State != m_protocols.nmea2000) {
+    if (previous_nmea2000_state != m_protocols.nmea2000) {
       UpdateNMEA2000Listeners();
     }
-    if (previousSignalKState != m_protocols.signalK) {
+    if (previous_signal_k_state != m_protocols.signalK) {
       UpdateSignalKListeners();
     }
 
@@ -1323,8 +1323,8 @@ void RecordPlayMgr::ShowPreferencesDialogNative(wxWindow* parent) {
                      m_speed_threshold, m_stop_delay, m_protocols);
 
   if (dlg.ShowModal() == wxID_OK) {
-    bool previousNMEA2000State = m_protocols.nmea2000;
-    bool previousSignalKState = m_protocols.signalK;
+    bool previous_nmea2000_state = m_protocols.nmea2000;
+    bool previous_signal_k_state = m_protocols.signalK;
     SetDataFormat(dlg.GetDataFormat());
     SetRecordingDir(dlg.GetRecordingDir());
     SetLogRotate(dlg.GetLogRotate());
@@ -1337,10 +1337,10 @@ void RecordPlayMgr::ShowPreferencesDialogNative(wxWindow* parent) {
     SaveConfig();
 
     // Update NMEA 2000 listeners if the setting changed
-    if (previousNMEA2000State != m_protocols.nmea2000) {
+    if (previous_nmea2000_state != m_protocols.nmea2000) {
       UpdateNMEA2000Listeners();
     }
-    if (previousSignalKState != m_protocols.signalK) {
+    if (previous_signal_k_state != m_protocols.signalK) {
       UpdateSignalKListeners();
     }
 
@@ -1367,9 +1367,9 @@ void RecordPlayMgr::CheckLogRotation() {
   }
 }
 
-bool RecordPlayMgr::ParseNmeaComponents(wxString nmea, wxString& talkerId,
+bool RecordPlayMgr::ParseNmeaComponents(wxString nmea, wxString& talker_id,
                                         wxString& sentence_id,
-                                        bool& hasTimestamp) {
+                                        bool& has_timestamp) {
   // Basic length check - minimum NMEA sentence should be at least 10 chars
   // $GPGGA,*hh
   if (nmea.IsEmpty() || (nmea[0] != '$' && nmea[0] != '!')) {
@@ -1385,7 +1385,7 @@ bool RecordPlayMgr::ParseNmeaComponents(wxString nmea, wxString& talkerId,
   if (header.length() != 6) return false;
 
   // Extract talker ID (GP, GN, etc.) and sentence ID (RMC, ZDA, etc.)
-  talkerId = header.Mid(1, 2);
+  talker_id = header.Mid(1, 2);
   sentence_id = header.Mid(3);
 
   // Special handling for AIS messages starting with !
@@ -1396,18 +1396,18 @@ bool RecordPlayMgr::ParseNmeaComponents(wxString nmea, wxString& talkerId,
   // - Must be ASCII
   // - Must be alphabetic
   // - Must be uppercase
-  if (talkerId.length() != 2 || !talkerId.IsAscii() || !talkerId.IsWord()) {
+  if (talker_id.length() != 2 || !talker_id.IsAscii() || !talker_id.IsWord()) {
     return false;
   }
 
   if (is_ais) {
     // For AIS messages, only accept specific talker IDs.
-    if (talkerId != "AI" && talkerId != "AB" && talkerId != "BS") {
+    if (talker_id != "AI" && talker_id != "AB" && talker_id != "BS") {
       return false;
     }
   } else {
     // Standard NMEA.
-    if (!talkerId.IsWord() || talkerId != talkerId.Upper()) {
+    if (!talker_id.IsWord() || talker_id != talker_id.Upper()) {
       return false;
     }
   }
@@ -1440,11 +1440,11 @@ bool RecordPlayMgr::ParseNmeaComponents(wxString nmea, wxString& talkerId,
   // Check for known sentence types containing timestamps.
   if (sentence_id == "RMC" || sentence_id == "ZDA" || sentence_id == "GGA" ||
       sentence_id == "GBS" || sentence_id == "GLL") {
-    hasTimestamp = true;
+    has_timestamp = true;
     return true;
   }
   // Unknown sentence type but valid NMEA format.
-  hasTimestamp = false;
+  has_timestamp = false;
   return true;
 }
 
@@ -1499,7 +1499,7 @@ bool RecordPlayMgr::ScanFileTimestamps(bool& has_valid_timestamps,
     wxLogMessage("File not open");
     return false;
   }
-  wxLogMessage("Scanning timestamps in %s", m_ifilename);
+  wxLogMessage("Scanning timestamps in %s", m_input_file);
   // Reset all state
   m_has_timestamps = false;
   m_first_timestamp = wxDateTime();
@@ -1614,7 +1614,7 @@ bool RecordPlayMgr::ScanFileTimestamps(bool& has_valid_timestamps,
 
     // Log statistics about file quality
     wxLogMessage("Found %d valid and %d invalid sentences in %s",
-                 validSentences, invalidSentences, m_ifilename);
+                 validSentences, invalidSentences, m_input_file);
 
     // Only fail if we found no valid sentences at all
     if (validSentences == 0) {
@@ -1652,7 +1652,7 @@ bool RecordPlayMgr::ScanFileTimestamps(bool& has_valid_timestamps,
             FormatIsoDateTime(m_last_timestamp));
       }
     } else {
-      wxLogMessage("No timestamps found in NMEA file %s", m_ifilename);
+      wxLogMessage("No timestamps found in NMEA file %s", m_input_file);
     }
   }
 
@@ -1670,11 +1670,11 @@ bool RecordPlayMgr::ScanFileTimestamps(bool& has_valid_timestamps,
   return true;
 }
 
-wxString RecordPlayMgr::GetNextNonEmptyLine(bool fromStart) {
+wxString RecordPlayMgr::GetNextNonEmptyLine(bool from_start) {
   if (!m_istream.IsOpened()) return "";
 
   wxString line;
-  if (fromStart) {
+  if (from_start) {
     m_istream.GoToLine(-1);
     line = m_istream.GetFirstLine();
   } else {
@@ -1704,10 +1704,10 @@ bool RecordPlayMgr::SeekToFraction(double fraction) {
 
   // For files without timestamps, use line-based position.
   if (!HasValidTimestamps()) {
-    int totalLines = m_istream.GetLineCount();
-    if (totalLines > 0) {
-      int targetLine = static_cast<int>(fraction * totalLines);
-      m_istream.GoToLine(targetLine);
+    int total_lines = m_istream.GetLineCount();
+    if (total_lines > 0) {
+      int target_line = static_cast<int>(fraction * total_lines);
+      m_istream.GoToLine(target_line);
       return true;
     }
     return false;
@@ -1720,10 +1720,10 @@ bool RecordPlayMgr::SeekToFraction(double fraction) {
     }
 
     // Calculate target timestamp
-    wxTimeSpan totalSpan = m_last_timestamp - m_first_timestamp;
-    wxTimeSpan targetSpan =
-        wxTimeSpan::Seconds((totalSpan.GetSeconds().ToDouble() * fraction));
-    wxDateTime targetTime = m_first_timestamp + targetSpan;
+    wxTimeSpan total_span = m_last_timestamp - m_first_timestamp;
+    wxTimeSpan target_span =
+        wxTimeSpan::Seconds((total_span.GetSeconds().ToDouble() * fraction));
+    wxDateTime target_time = m_first_timestamp + target_span;
 
     // Scan file until we find first message after target time
     wxString line = GetNextNonEmptyLine(true);  // Skip header
@@ -1733,7 +1733,7 @@ bool RecordPlayMgr::SeekToFraction(double fraction) {
       wxDateTime timestamp;
       wxString nmea;
       bool success = ParseCSVLineTimestamp(line, &nmea, &timestamp);
-      if (success && timestamp.IsValid() && timestamp >= targetTime) {
+      if (success && timestamp.IsValid() && timestamp >= target_time) {
         // Found our position, prepare to play from here
         m_current_timestamp = timestamp;
         if (m_playing) {
@@ -1799,26 +1799,26 @@ double RecordPlayMgr::GetProgressFraction() const {
 
   // For files with timestamps
   if (HasValidTimestamps()) {
-    wxTimeSpan totalSpan = m_last_timestamp - m_first_timestamp;
-    wxTimeSpan currentSpan = m_current_timestamp - m_first_timestamp;
+    wxTimeSpan total_span = m_last_timestamp - m_first_timestamp;
+    wxTimeSpan current_span = m_current_timestamp - m_first_timestamp;
 
-    if (totalSpan.GetSeconds().ToLong() == 0) {
+    if (total_span.GetSeconds().ToLong() == 0) {
       return 0.0;
     }
 
-    return currentSpan.GetSeconds().ToDouble() /
-           totalSpan.GetSeconds().ToDouble();
+    return current_span.GetSeconds().ToDouble() /
+           total_span.GetSeconds().ToDouble();
   }
 
   // For files without timestamps, use line position.
   if (m_istream.IsOpened()) {
-    int totalLines = m_istream.GetLineCount();
-    int currentLine = m_istream.GetCurrentLine();
-    if (totalLines > 0) {
+    int total_lines = m_istream.GetLineCount();
+    int current_line = m_istream.GetCurrentLine();
+    if (total_lines > 0) {
       // Clamp current line to total lines to ensure fraction doesn't
       // exceed 1.0.
-      currentLine = std::max(0, std::min(currentLine, totalLines));
-      return static_cast<double>(currentLine) / totalLines;
+      current_line = std::max(0, std::min(current_line, total_lines));
+      return static_cast<double>(current_line) / total_lines;
     }
   }
 
@@ -1826,16 +1826,16 @@ double RecordPlayMgr::GetProgressFraction() const {
 }
 
 void RecordPlayMgr::ClearInputFile() {
-  m_ifilename.Clear();
+  m_input_file.Clear();
   if (m_istream.IsOpened()) {
     m_istream.Close();
   }
 }
 
 wxString RecordPlayMgr::GetInputFile() const {
-  if (!m_ifilename.IsEmpty()) {
-    if (wxFileExists(m_ifilename)) {
-      return m_ifilename;
+  if (!m_input_file.IsEmpty()) {
+    if (wxFileExists(m_input_file)) {
+      return m_input_file;
     }
   }
   return "";
@@ -1846,7 +1846,7 @@ std::unique_ptr<DataMonitorReplayMgr> RecordPlayMgr::DmReplayMgrFactory() {
   auto user_message = [&](VdrMsgType t, const std::string& s) {
     OnVdrMsg(t, s);
   };
-  return std::make_unique<DataMonitorReplayMgr>(m_ifilename.ToStdString(),
+  return std::make_unique<DataMonitorReplayMgr>(m_input_file.ToStdString(),
                                                 update_controls, user_message);
 }
 
@@ -1855,7 +1855,7 @@ bool RecordPlayMgr::LoadFile(const wxString& filename, wxString* error) {
     StopPlayback();
   }
 
-  m_ifilename = filename;
+  m_input_file = filename;
   if (m_protocols.replay_mode == ReplayMode::kLoopback) {
     m_dm_replay_mgr = DmReplayMgrFactory();
   }
@@ -1871,7 +1871,7 @@ bool RecordPlayMgr::LoadFile(const wxString& filename, wxString* error) {
   if (m_istream.IsOpened()) {
     m_istream.Close();
   }
-  if (!m_istream.Open(m_ifilename)) {
+  if (!m_istream.Open(m_input_file)) {
     if (error) {
       *error = _("Failed to open file: ") + filename;
     }

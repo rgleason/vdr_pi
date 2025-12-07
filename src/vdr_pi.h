@@ -23,6 +23,9 @@
  * Records maritime data including NMEA 0183, NMEA 2000 and SignalK messages to
  * files for later playback. Supports automatic recording based on vessel speed
  * and automatic file rotation for data management.
+ *
+ * From OpenCPN version 5.14 also  supports replaying  log files created by the
+ * OpenCPN core Data Monitor.
  */
 
 #ifndef VDRPI_H_
@@ -38,9 +41,6 @@
 
 #include <wx/aui/aui.h>
 #include <wx/bitmap.h>
-#include <wx/fileconf.h>
-#include <wx/filepicker.h>
-#include <wx/file.h>
 #include <wx/string.h>
 
 #include "commons.h"
@@ -57,8 +57,11 @@
  */
 class VdrPi : public opencpn_plugin_118 {
 public:
-  /** Create a new VDR plugin instance. */
-  explicit VdrPi(void* ppimgr);
+  /**
+   * Constructor
+   * @param opencpn_plugin Pointer to dl-loaded library.
+   */
+  explicit VdrPi(void* opencpn_plugin);
 
   /** Initialize the plugin and set up toolbar items. */
   int Init() override;
@@ -113,18 +116,17 @@ public:
 
   /** Update the plugin's color scheme .*/
   void SetColorScheme(PI_ColorScheme cs) override {
-    if (m_pvdrcontrol) m_pvdrcontrol->SetColorScheme(cs);
+    if (m_vdr_control) m_vdr_control->SetColorScheme(cs);
   }
 
 private:
   std::shared_ptr<RecordPlayMgr> m_record_play_mgr;
-  VdrControl* m_pvdrcontrol;
-  wxAuiManager* m_pauimgr;
-  wxBitmap m_panelBitmap;
+  VdrControl* m_vdr_control;
+  wxAuiManager* m_auimgr;
+  wxBitmap m_panel_bitmap;
 
   void SetupControl();
   void DestroyControl();
-  VdrControl* GetControl() { return m_pvdrcontrol; }
 };
 
 #endif

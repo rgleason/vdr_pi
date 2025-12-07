@@ -47,9 +47,10 @@ bool VdrControl::LoadFile(const wxString& current_file) {
   wxString error;
   UpdatePlaybackStatus(_("Stopped"));
   UpdateNetworkStatus("");
-  if (m_pvdr->LoadFile(current_file, &error)) {
-    bool hasValidTimestamps;
-    bool success = m_pvdr->ScanFileTimestamps(hasValidTimestamps, error);
+  if (m_record_play_mgr->LoadFile(current_file, &error)) {
+    bool has_valid_timestamps;
+    bool success =
+        m_record_play_mgr->ScanFileTimestamps(has_valid_timestamps, error);
     UpdateFileLabel(current_file);
     if (!success) {
       UpdateFileStatus(error);
@@ -61,7 +62,7 @@ bool VdrControl::LoadFile(const wxString& current_file) {
     UpdateControls();
   } else {
     // If loading fails, clear the saved filename
-    m_pvdr->ClearInputFile();
+    m_record_play_mgr->ClearInputFile();
     UpdateFileLabel("");
     UpdateFileStatus(error);
     UpdateControls();
@@ -74,7 +75,7 @@ VdrControl::VdrControl(wxWindow* parent,
                        std::shared_ptr<RecordPlayMgr> record_play_mgr)
     : wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                wxBORDER_NONE, "VDR Control"),
-      m_pvdr(std::move(record_play_mgr)),
+      m_record_play_mgr(std::move(record_play_mgr)),
       m_is_dragging(false),
       m_was_playing_before_drag(false) {
   wxColour cl;
@@ -84,10 +85,10 @@ VdrControl::VdrControl(wxWindow* parent,
   CreateControls();
 
   // Check if there's already a file loaded from config
-  wxString currentFile = m_pvdr->GetInputFile();
-  if (!currentFile.IsEmpty()) {
+  wxString current_file = m_record_play_mgr->GetInputFile();
+  if (!current_file.IsEmpty()) {
     // Try to load the file
-    LoadFile(currentFile);
+    LoadFile(current_file);
   } else {
     UpdateFileStatus(_("No file loaded"));
   }
@@ -104,8 +105,8 @@ void VdrControl::CreateControls() {
   m_button_size = static_cast<int>(7 * pixel_per_mm);
 #ifdef __WXQT__
   // A simple way to get touch-compatible tool size
-  wxRect tbRect = GetMasterToolbarRect();
-  m_button_size = std::max(m_button_size, tbRect.width / 2);
+  wxRect tb_rect = GetMasterToolbarRect();
+  m_button_size = std::max(m_button_size, tb_rect.width / 2);
 #endif
   wxSize buttonDimension(m_button_size, m_button_size);
   int svg_size = static_cast<int>(m_button_size * OCPN_GetWinDIPScaleFactor());
@@ -237,9 +238,9 @@ void VdrControl::SetSpeedMultiplier(int value) {
 }
 
 void VdrControl::UpdateTimeLabel() {
-  if (m_pvdr->GetCurrentTimestamp().IsValid()) {
-    wxString time_str =
-        m_pvdr->GetCurrentTimestamp().ToUTC().Format("%Y-%m-%d %H:%M:%S UTC");
+  if (m_record_play_mgr->GetCurrentTimestamp().IsValid()) {
+    wxString time_str = m_record_play_mgr->GetCurrentTimestamp().ToUTC().Format(
+        "%Y-%m-%d %H:%M:%S UTC");
     m_time_label->SetLabel("Date and Time: " + time_str);
   } else {
     m_time_label->SetLabel(_("Date and Time: --"));
@@ -248,7 +249,7 @@ void VdrControl::UpdateTimeLabel() {
 
 void VdrControl::OnLoadButton(wxCommandEvent& event) {
   // Stop any current playback
-  if (m_pvdr->IsPlaying()) {
+  if (m_record_play_mgr->IsPlaying()) {
     StopPlayback();
   }
 
@@ -264,7 +265,7 @@ void VdrControl::OnLoadButton(wxCommandEvent& event) {
   if (response != wxID_OK) return;
 
   bool is_vdrfile = DataMonitorReplayMgr::IsVdrFormat(file.ToStdString());
-  if (m_pvdr->IsUsingLoopback()) {
+  if (m_record_play_mgr->IsUsingLoopback()) {
     if (!is_vdrfile)
       OCPNMessageBox_PlugIn(GetOCPNCanvasWindow(), kBadVdrFormat);
   } else {
@@ -277,20 +278,21 @@ void VdrControl::OnLoadButton(wxCommandEvent& event) {
 void VdrControl::OnProgressSliderUpdated(wxScrollWinEvent& event) {
   if (!m_is_dragging) {
     m_is_dragging = true;
-    m_was_playing_before_drag = m_pvdr->IsPlaying();
+    m_was_playing_before_drag = m_record_play_mgr->IsPlaying();
     if (m_was_playing_before_drag) {
       PausePlayback();
     }
   }
-  if (m_pvdr->GetFirstTimestamp().IsValid() &&
-      m_pvdr->GetLastTimestamp().IsValid()) {
+  if (m_record_play_mgr->GetFirstTimestamp().IsValid() &&
+      m_record_play_mgr->GetLastTimestamp().IsValid()) {
     // Update time display while dragging but don't seek yet
     double fraction = m_progress_slider->GetValue() / 1000.0;
-    wxTimeSpan total_span =
-        m_pvdr->GetLastTimestamp() - m_pvdr->GetFirstTimestamp();
-    wxTimeSpan currentSpan =
+    wxTimeSpan total_span = m_record_play_mgr->GetLastTimestamp() -
+                            m_record_play_mgr->GetFirstTimestamp();
+    wxTimeSpan current_span =
         wxTimeSpan::Seconds((total_span.GetSeconds().ToDouble() * fraction));
-    m_pvdr->SetCurrentTimestamp(m_pvdr->GetFirstTimestamp() + currentSpan);
+    m_record_play_mgr->SetCurrentTimestamp(
+        m_record_play_mgr->GetFirstTimestamp() + current_span);
     UpdateTimeLabel();
   }
   event.Skip();
@@ -298,10 +300,10 @@ void VdrControl::OnProgressSliderUpdated(wxScrollWinEvent& event) {
 
 void VdrControl::OnProgressSliderEndDrag(wxScrollEvent& event) {
   double fraction = m_progress_slider->GetValue() / 1000.0;
-  m_pvdr->SeekToFraction(fraction);
+  m_record_play_mgr->SeekToFraction(fraction);
   // Reset the end-of-file state when user drags the slider, the button should
   // change to "play" state.
-  m_pvdr->ResetEndOfFile();
+  m_record_play_mgr->ResetEndOfFile();
   if (m_was_playing_before_drag) {
     StartPlayback();
   }
@@ -311,10 +313,10 @@ void VdrControl::OnProgressSliderEndDrag(wxScrollEvent& event) {
 }
 
 void VdrControl::UpdateControls() {
-  bool has_file = !m_pvdr->GetInputFile().IsEmpty();
-  bool is_recording = m_pvdr->IsRecording();
-  bool is_playing = m_pvdr->IsPlaying();
-  bool is_at_end = m_pvdr->IsAtFileEnd();
+  bool has_file = !m_record_play_mgr->GetInputFile().IsEmpty();
+  bool is_recording = m_record_play_mgr->IsRecording();
+  bool is_playing = m_record_play_mgr->IsPlaying();
+  bool is_at_end = m_record_play_mgr->IsAtFileEnd();
 
   // Update the play/pause/stop button appearance
   if (is_at_end) {
@@ -329,7 +331,7 @@ void VdrControl::UpdateControls() {
         m_button_size));
     m_play_pause_btn->SetToolTip(is_playing ? m_pause_btn_tooltip
                                             : m_play_btn_tooltip);
-    if (m_pvdr->IsError()) UpdateFileStatus(_("Error"));
+    if (m_record_play_mgr->IsError()) UpdateFileStatus(_("Error"));
   }
 
   // Enable/disable controls based on state
@@ -339,12 +341,12 @@ void VdrControl::UpdateControls() {
   m_progress_slider->Enable(has_file && !is_recording);
 
   // Update toolbar state
-  m_pvdr->SetToolbarToolStatus();
+  m_record_play_mgr->SetToolbarToolStatus();
 
   // Update time display
-  if (has_file && m_pvdr->GetCurrentTimestamp().IsValid()) {
-    wxString time_str =
-        m_pvdr->GetCurrentTimestamp().ToUTC().Format("%Y-%m-%d %H:%M:%S UTC");
+  if (has_file && m_record_play_mgr->GetCurrentTimestamp().IsValid()) {
+    wxString time_str = m_record_play_mgr->GetCurrentTimestamp().ToUTC().Format(
+        "%Y-%m-%d %H:%M:%S UTC");
     m_time_label->SetLabel(_("Date and Time: ") + time_str);
   } else {
     m_time_label->SetLabel(_("Date and Time: ") + "--");
@@ -371,32 +373,32 @@ void VdrControl::UpdateFileLabel(const wxString& filename) {
 // Unused, to be removed
 void VdrControl::StartPlayback() {
   wxString file_status;
-  m_pvdr->StartPlayback(file_status);
-  if (m_pvdr->IsPlaying()) UpdatePlaybackStatus(_("Playing"));
+  m_record_play_mgr->StartPlayback(file_status);
+  if (m_record_play_mgr->IsPlaying()) UpdatePlaybackStatus(_("Playing"));
   if (!file_status.empty()) UpdateFileStatus(file_status);
 }
 
 // Unused, to be removed
 void VdrControl::PausePlayback() {
-  m_pvdr->PausePlayback();
+  m_record_play_mgr->PausePlayback();
   UpdatePlaybackStatus(_("Paused"));
 }
 
 // Unused, to be removed
 void VdrControl::StopPlayback() {
-  m_pvdr->StopPlayback();
+  m_record_play_mgr->StopPlayback();
   UpdatePlaybackStatus(_("Stopped"));
 }
 
 void VdrControl::OnPlayPauseButton(wxCommandEvent& event) {
-  if (!m_pvdr->IsPlaying()) {
-    if (m_pvdr->GetInputFile().IsEmpty()) {
+  if (!m_record_play_mgr->IsPlaying()) {
+    if (m_record_play_mgr->GetInputFile().IsEmpty()) {
       UpdateFileStatus(_("No file selected"));
       return;
     }
 
     // If we're at the end, restart from beginning
-    if (m_pvdr->IsAtFileEnd()) {
+    if (m_record_play_mgr->IsAtFileEnd()) {
       StopPlayback();
     }
     StartPlayback();
@@ -412,13 +414,13 @@ void VdrControl::OnDataFormatRadioButton(wxCommandEvent& event) {
 }
 
 void VdrControl::OnSettingsButton(wxCommandEvent& event) {
-  m_pvdr->ShowPreferencesDialogNative(this);
+  m_record_play_mgr->ShowPreferencesDialogNative(this);
   event.Skip();
 }
 
 void VdrControl::OnSpeedSliderUpdated(wxCommandEvent& event) {
-  if (m_pvdr->IsPlaying()) {
-    m_pvdr->AdjustPlaybackBaseTime();
+  if (m_record_play_mgr->IsPlaying()) {
+    m_record_play_mgr->AdjustPlaybackBaseTime();
   }
 }
 
@@ -427,14 +429,15 @@ void VdrControl::SetProgress(double fraction) {
   int slider_pos = wxRound(fraction * 1000);
   m_progress_slider->SetValue(slider_pos);
 
-  if (m_pvdr->GetFirstTimestamp().IsValid() &&
-      m_pvdr->GetLastTimestamp().IsValid()) {
+  if (m_record_play_mgr->GetFirstTimestamp().IsValid() &&
+      m_record_play_mgr->GetLastTimestamp().IsValid()) {
     // Calculate and set current timestamp based on the fraction
-    wxTimeSpan total_span =
-        m_pvdr->GetLastTimestamp() - m_pvdr->GetFirstTimestamp();
+    wxTimeSpan total_span = m_record_play_mgr->GetLastTimestamp() -
+                            m_record_play_mgr->GetFirstTimestamp();
     double seconds = total_span.GetSeconds().ToDouble() * fraction;
     wxTimeSpan current_span = wxTimeSpan::Seconds(std::round(seconds));
-    m_pvdr->SetCurrentTimestamp(m_pvdr->GetFirstTimestamp() + current_span);
+    m_record_play_mgr->SetCurrentTimestamp(
+        m_record_play_mgr->GetFirstTimestamp() + current_span);
 
     // Update time display
     UpdateTimeLabel();

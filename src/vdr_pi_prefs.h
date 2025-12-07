@@ -52,19 +52,19 @@ public:
    * @param id Dialog identifier
    * @param format Current data format setting
    * @param recordingDir Path to recording directory
-   * @param logRotate Whether log rotation is enabled
-   * @param logRotateInterval Hours between log rotations
-   * @param autoStartRecording Enable automatic recording on startup
-   * @param useSpeedThreshold Enable speed-based recording control
-   * @param speedThreshold Speed threshold in knots
-   * @param stopDelay Minutes to wait before stopping
+   * @param log_rotate Whether log rotation is enabled
+   * @param log_rotate_interval Hours between log rotations
+   * @param auto_start_recording Enable automatic recording on startup
+   * @param use_speed_threshold Enable speed-based recording control
+   * @param speed_threshold Speed threshold in knots
+   * @param stop_delay Minutes to wait before stopping
    * @param protocols Active protocol settings
    */
   VdrPrefsDialog(wxWindow* parent, wxWindowID id, VdrDataFormat format,
-                 const wxString& recordingDir, bool logRotate,
-                 int logRotateInterval, bool autoStartRecording,
-                 bool useSpeedThreshold, double speedThreshold, int stopDelay,
-                 const VdrProtocolSettings& protocols);
+                 const wxString& recordingDir, bool log_rotate,
+                 int log_rotate_interval, bool auto_start_recording,
+                 bool use_speed_threshold, double speed_threshold,
+                 int stop_delay, const VdrProtocolSettings& protocols);
 
   /** Get selected data format setting. */
   [[nodiscard]] VdrDataFormat GetDataFormat() const { return m_format; }
@@ -143,10 +143,10 @@ private:
   wxSpinCtrl* m_log_rotate_interval_ctrl;  //!< Hours between rotations
 
   // Auto record settings
-  wxCheckBox* m_autoStartRecordingCheck;     //!< Enable auto-start recording
-  wxCheckBox* m_use_speed_threshold_check;   //!< Enable speed threshold
-  wxSpinCtrlDouble* m_speed_threshold_ctrl;  //!< Speed threshold value
-  wxSpinCtrl* m_stop_delay_ctrl;             //!< Minutes before stop
+  wxCheckBox* m_auto_start_recording_check_;  //!< Enable auto-start recording
+  wxCheckBox* m_use_speed_threshold_check;    //!< Enable speed threshold
+  wxSpinCtrlDouble* m_speed_threshold_ctrl;   //!< Speed threshold value
+  wxSpinCtrl* m_stop_delay_ctrl;              //!< Minutes before stop
 
   // Protocol selection
   wxCheckBox* m_nmea0183_check;  //!< Enable NMEA 0183 recording

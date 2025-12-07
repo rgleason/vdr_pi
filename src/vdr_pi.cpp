@@ -28,8 +28,12 @@
 #include "icons.h"
 #include "ocpn_plugin.h"
 
-// class factories, used to create and destroy instances of the PlugIn
+const char* const kLongDescription = _(R"(Voyage Data Recorder
+Supports NMEA input data save and replay. From OpenCPN
+version 5.14 also supports replaying log files created
+by the core's Data Monitor)");
 
+// class factories, used to create and destroy instances of the PlugIn
 extern "C" DECL_EXP opencpn_plugin* create_pi(void* ppimgr) {
   return new VdrPi(ppimgr);
 }
@@ -42,7 +46,7 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p) { delete p; }
 //
 //---------------------------------------------------------------------------------------------------------
 
-VdrPi::VdrPi(void* ppimgr) : opencpn_plugin_118(ppimgr) {
+VdrPi::VdrPi(void* opencpn_plugin) : opencpn_plugin_118(opencpn_plugin) {
   // Create the PlugIn icons
   InitializeImages();
 
@@ -64,12 +68,12 @@ VdrPi::VdrPi(void* ppimgr) : opencpn_plugin_118(ppimgr) {
   }
   wxImage panelIcon(path);
   if (panelIcon.IsOk())
-    m_panelBitmap = wxBitmap(panelIcon);
+    m_panel_bitmap = wxBitmap(panelIcon);
   else
     wxLogWarning("VDR panel icon has NOT been loaded");
 
-  m_pvdrcontrol = nullptr;
-  m_pauimgr = GetFrameAuiManager();
+  m_vdr_control = nullptr;
+  m_auimgr = GetFrameAuiManager();
 }
 
 int VdrPi::Init() {
@@ -78,10 +82,10 @@ int VdrPi::Init() {
   MockControlGui tmp_gui;
 
   m_record_play_mgr = std::make_shared<RecordPlayMgr>(this, &tmp_gui);
-  m_pvdrcontrol = new VdrControl(wxTheApp->GetTopWindow(), m_record_play_mgr);
+  m_vdr_control = new VdrControl(wxTheApp->GetTopWindow(), m_record_play_mgr);
   SetupControl();
-  m_pauimgr->Update();
-  m_record_play_mgr->SetControlGui(m_pvdrcontrol);
+  m_auimgr->Update();
+  m_record_play_mgr->SetControlGui(m_vdr_control);
   m_record_play_mgr->Init();
 
   return (WANTS_TOOLBAR_CALLBACK | INSTALLS_TOOLBAR_TOOL | WANTS_CONFIG |
@@ -89,11 +93,11 @@ int VdrPi::Init() {
 }
 
 bool VdrPi::DeInit() {
-  if (m_pvdrcontrol) {
-    m_pauimgr->DetachPane(m_pvdrcontrol);
-    m_pvdrcontrol->Close();
-    m_pvdrcontrol->Destroy();
-    m_pvdrcontrol = nullptr;
+  if (m_vdr_control) {
+    m_auimgr->DetachPane(m_vdr_control);
+    m_vdr_control->Close();
+    m_vdr_control->Destroy();
+    m_vdr_control = nullptr;
   }
   if (m_record_play_mgr) {
     m_record_play_mgr->DeInit();
@@ -103,10 +107,10 @@ bool VdrPi::DeInit() {
 }
 
 void VdrPi::DestroyControl() {
-  m_pauimgr->DetachPane(m_pvdrcontrol);
-  m_pvdrcontrol->Close();
-  m_pvdrcontrol->Destroy();
-  m_pvdrcontrol = nullptr;  // FIXME (leamas) release
+  m_auimgr->DetachPane(m_vdr_control);
+  m_vdr_control->Close();
+  m_vdr_control->Destroy();
+  m_vdr_control = nullptr;  // FIXME (leamas) release
   m_record_play_mgr->SetControlGui(nullptr);
 }
 
@@ -128,9 +132,9 @@ void VdrPi::SetupControl() {
                            .Fixed()
                            .CloseButton(true)
                            .Show(true);
-  m_pauimgr->AddPane(m_pvdrcontrol, pane);
-  m_pauimgr->Update();
-  m_record_play_mgr->SetControlGui(m_pvdrcontrol);
+  m_auimgr->AddPane(m_vdr_control, pane);
+  m_auimgr->Update();
+  m_record_play_mgr->SetControlGui(m_vdr_control);
 }
 
 int VdrPi::GetAPIVersionMajor() { return atoi(API_VERSION); }
@@ -153,16 +157,10 @@ const char* VdrPi::GetPlugInVersionPre() { return PKG_PRERELEASE; }
 
 const char* VdrPi::GetPlugInVersionBuild() { return PKG_BUILD_INFO; }
 
-wxBitmap* VdrPi::GetPlugInBitmap() { return &m_panelBitmap; }
+wxBitmap* VdrPi::GetPlugInBitmap() { return &m_panel_bitmap; }
 
 wxString VdrPi::GetCommonName() { return _("VDR"); }
 
-wxString VdrPi::GetShortDescription() {
-  return _("Voyage Data Recorder plugin for OpenCPN");
-}
+wxString VdrPi::GetShortDescription() { return _("Voyage Data RecorderN"); }
 
-wxString VdrPi::GetLongDescription() {
-  return _(
-      "Voyage Data Recorder plugin for OpenCPN\n\
-Provides NMEA stream save and replay.");
-}
+wxString VdrPi::GetLongDescription() { return kLongDescription; }
