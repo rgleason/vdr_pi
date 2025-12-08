@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2024 by OpenCPN development team                        *
+ *   Copyright (C) 2025 Sebastian Rosset                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -12,9 +12,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
 #ifndef _VDR_MOCK_PLUGIN_API_H_
@@ -89,5 +87,17 @@ public:
     return true;
   }
 };
+
+double OCPN_GetWinDIPScaleFactor();
+wxBitmap GetBitmapFromSVGFile(wxString, unsigned int, unsigned int);
+int OCPNMessageBox_PlugIn(wxWindow*, wxString const&, wxString const&, int, int,
+                          int);
+const std::unordered_map<std::string, std::string> GetAttributes(
+    DriverHandle handle);
+double PlugInGetDisplaySizeMM();
+std::vector<DriverHandle> GetActiveDrivers();
+
+CommDriverResult WriteCommDriver(
+    DriverHandle handle, const std::shared_ptr<std::vector<uint8_t>>& payload);
 
 #endif  // _VDR_MOCK_PLUGIN_API_H_

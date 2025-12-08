@@ -1,5 +1,6 @@
 /***************************************************************************
- *   Copyright (C) 2024 by OpenCPN development team                        *
+ *   Copyright (C) 2011  Jean-Eudes Onfray                                 *
+ *   Copyright (C) 2025  Sebastian Rosset                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -12,24 +13,17 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
-#ifndef _VDR_NETWORK_H_
-#define _VDR_NETWORK_H_
+#ifndef VDR_NETWORK_H_
+#define VDR_NETWORK_H_
+
+#include <vector>
 
 #include <wx/wx.h>
 #include <wx/socket.h>
-
-#include <vector>
-#include <memory>
-
-// Forward declarations
-class wxSocketServer;
-class wxDatagramSocket;
-class wxSocketEvent;
+#include <wx/string.h>
 
 /**
  * Network server for replaying NMEA messages over TCP or UDP.
@@ -38,13 +32,13 @@ class wxSocketEvent;
  * and broadcast messages to connected clients. For TCP, maintains a list of
  * connected clients. For UDP, broadcasts to localhost on the specified port.
  */
-class VDRNetworkServer : public wxEvtHandler {
+class VdrNetworkServer : public wxEvtHandler {
 public:
   /** Constructor initializes server state. */
-  VDRNetworkServer();
+  VdrNetworkServer();
 
   /** Destructor ensures proper cleanup of sockets. */
-  ~VDRNetworkServer();
+  ~VdrNetworkServer() override;
 
   /**
    * Start the network server.
@@ -83,13 +77,13 @@ public:
   bool SendBinary(const void* data, size_t length);
 
   /** Check if server is currently running. */
-  bool IsRunning() const { return m_running; }
+  [[nodiscard]] bool IsRunning() const { return m_running; }
 
   /** Get current protocol (TCP/UDP). */
-  bool IsTCP() const { return m_useTCP; }
+  [[nodiscard]] bool IsTCP() const { return m_useTCP; }
 
   /** Get current port number. */
-  int GetPort() const { return m_port; }
+  [[nodiscard]] int GetPort() const { return m_port; }
 
 private:
   /** Handle incoming TCP socket events. */
@@ -111,16 +105,14 @@ private:
   bool SendImpl(const void* data, size_t length);
 
 private:
-  wxSocketServer* m_tcpServer;              //!< TCP server socket
-  wxDatagramSocket* m_udpSocket;            //!< UDP socket
-  std::vector<wxSocketBase*> m_tcpClients;  //!< Connected TCP clients
-  bool m_running;                           //!< Server running state
-  bool m_useTCP;                            //!< Current protocol
-  int m_port;                               //!< Current port
+  wxSocketServer* m_tcp_server;              //!< TCP server socket
+  wxDatagramSocket* m_udp_socket;            //!< UDP socket
+  std::vector<wxSocketBase*> m_tcp_clients;  //!< Connected TCP clients
+  bool m_running;                            //!< Server running state
+  bool m_useTCP;                             //!< Current protocol
+  int m_port;                                //!< Current port
 
-  static const int DEFAULT_PORT = 10111;  //!< Default NMEA port
-
-  DECLARE_EVENT_TABLE()
+  static constexpr int kDefaultPort = 10111;  //!< Default NMEA port
 };
 
-#endif  // _VDR_NETWORK_H_
+#endif  // VDR_NETWORK_H_

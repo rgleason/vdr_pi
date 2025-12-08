@@ -7,25 +7,22 @@
 #include <wx/wx.h>
 #endif
 
-#include <wx/bitmap.h>
 #include <wx/string.h>
 
-#include "config.h"
+extern void InitializeImages();
 
-extern void initialize_images(void);
+extern wxString g_svg_vdr;
+extern wxString g_svg_vdr_play;
+extern wxString g_svg_vdr_record;
+extern wxString g_svg_play_rollover;
+extern wxString g_svg_play_toggled;
+extern wxString g_svg_record_rollover;
+extern wxString g_svg_record_toggled;
 
-extern wxString _svg_vdr;
-extern wxString _svg_vdr_play;
-extern wxString _svg_vdr_record;
-extern wxString _svg_play_rollover;
-extern wxString _svg_play_toggled;
-extern wxString _svg_record_rollover;
-extern wxString _svg_record_toggled;
-
-extern wxString _svg_settings;
-extern wxString _svg_file_open;
-extern wxString _svg_play_circle;
-extern wxString _svg_pause_circle;
-extern wxString _svg_stop_circle;
+extern wxString g_svg_settings;
+extern wxString g_svg_file_open;
+extern wxString g_svg_play_circle;
+extern wxString g_svg_pause_circle;
+extern wxString g_svg_stop_circle;
 
 #endif /* ICONS_H */

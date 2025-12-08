@@ -18,7 +18,7 @@
 /**
  * \file
  *
- * Data Monitor log files replaying state.
+ * Data Monitor log files replay state.
  */
 
 #ifndef Data_MonitoR_RePlaY_MgR_h
@@ -26,7 +26,6 @@
 
 #include <chrono>
 #include <cstdint>
-#include <fstream>
 #include <functional>
 #include <limits>
 #include <string>
@@ -60,7 +59,7 @@ public:
    * Create instance  ready to play a log file.
    * @param path Log file created by Data Monitor in VDR mode.
    * @param update_controls Callback updating GUI based on current state.
-   * @vdr_message Callback handling user info.
+   * @param vdr_message Callback handling user info.
    */
   DataMonitorReplayMgr(const std::string& path,
                        std::function<void()> update_controls,
@@ -91,26 +90,28 @@ public:
    */
   int Notify();
 
-  bool IsPlaying() const { return m_state == State::kPlaying; }
+  [[nodiscard]] bool IsPlaying() const { return m_state == State::kPlaying; }
 
-  bool IsAtEnd() const { return m_state == State::kEof; }
+  [[nodiscard]] bool IsAtEnd() const { return m_state == State::kEof; }
 
-  bool IsError() const { return m_state == State::kError; }
+  [[nodiscard]] bool IsError() const { return m_state == State::kError; }
 
-  bool IsIdle() const { return m_state == State::kIdle; }
+  [[nodiscard]] bool IsIdle() const { return m_state == State::kIdle; }
 
-  bool IsPaused() const { return m_state == State::kPaused; }
+  [[nodiscard]] bool IsPaused() const { return m_state == State::kPaused; }
 
-  bool IsDriverMissing() const { return m_state == State::kNoDriver; }
+  [[nodiscard]] bool IsDriverMissing() const {
+    return m_state == State::kNoDriver;
+  }
 
   /** Return how much of current file is played, number between 0 and 1. */
-  double GetProgressFraction() const;
+  [[nodiscard]] double GetProgressFraction() const;
 
   /**
    * Return currently played timestamp, milliseconds since 1/1 1970.
    * Undefined if nothing played.
  . */
-  uint64_t GetCurrentTimestamp() const;
+  [[nodiscard]] uint64_t GetCurrentTimestamp() const;
 
   /** Return true if file on path seems to be a Data Monitor VDR logfile */
   static bool IsVdrFormat(const std::string& path);
@@ -137,8 +138,8 @@ private:
     unsigned read_bytes;          ///< # read bytes so far
     unsigned file_size;
 
-    Log(unsigned _file_size) : read_bytes(0), file_size(_file_size) {}
-    Log(const std::string& path);
+    explicit Log(unsigned _file_size) : read_bytes(0), file_size(_file_size) {}
+    explicit Log(const std::string& path);
   } m_log;
 
   CsvReader m_csv_reader;
@@ -149,7 +150,7 @@ private:
   std::vector<DriverHandle> m_loopback_drivers;
 
   void HandleRow(const std::string& protocol, const std::string& msg_type,
-                 const std::string& source, const std::string& raw_data);
+                 const std::string& source, const std::string& raw_data) const;
 
   /**
    * Compute duration to next message to be sent <br> and update
@@ -158,7 +159,7 @@ private:
    * @param log Current used timestamps
    * @return Duration to next message.
    */
-  std::chrono::milliseconds ComputeDelay(const std::string& ms, Log& log);
+  std::chrono::milliseconds ComputeDelay(const std::string& ms, Log& log) const;
 };
 
 #endif  //  Data_MonitoR_RePlaY_MgR_h

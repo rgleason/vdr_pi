@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2024 by OpenCPN development team                        *
+ *   Copyright (C) 2025 Sebastian Rosset                                   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -12,9 +12,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
  **************************************************************************/
 
 #include <gtest/gtest.h>
@@ -29,11 +27,11 @@ protected:
 
 /** Test parsing of time field. */
 TEST_F(VDRTimeTest, TimeFieldParsing) {
-  NMEATimeInfo timeInfo;
+  NmeaTimeInfo timeInfo;
   int precision;
 
   EXPECT_TRUE(parser.ParseTimeField("123519", timeInfo, precision));
-  EXPECT_TRUE(timeInfo.hasTime);
+  EXPECT_TRUE(timeInfo.has_time);
   EXPECT_EQ(timeInfo.tm.tm_hour, 12);
   EXPECT_EQ(timeInfo.tm.tm_min, 35);
   EXPECT_EQ(timeInfo.tm.tm_sec, 19);
@@ -43,11 +41,11 @@ TEST_F(VDRTimeTest, TimeFieldParsing) {
 
 /** Test parsing of time field with milliseconds. */
 TEST_F(VDRTimeTest, TimeFieldParsingWithMs) {
-  NMEATimeInfo timeInfo;
+  NmeaTimeInfo timeInfo;
   int precision;
 
   EXPECT_TRUE(parser.ParseTimeField("123519.123", timeInfo, precision));
-  EXPECT_TRUE(timeInfo.hasTime);
+  EXPECT_TRUE(timeInfo.has_time);
   EXPECT_EQ(timeInfo.tm.tm_hour, 12);
   EXPECT_EQ(timeInfo.tm.tm_min, 35);
   EXPECT_EQ(timeInfo.tm.tm_sec, 19);
@@ -133,7 +131,7 @@ TEST_F(VDRTimeTest, RMCSentenceParsing) {
 
 /** Test invalid inputs. */
 TEST_F(VDRTimeTest, InvalidInputs) {
-  NMEATimeInfo timeInfo;
+  NmeaTimeInfo timeInfo;
   int precision;
 
   // Invalid hour
@@ -289,7 +287,7 @@ TEST_F(VDRTimeTest, CSVParsingISO8601) {
   wxString msg =
       "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A";
   wxString nmea;
-  bool success = parser.ParseCSVLineTimestamp(
+  bool success = parser.ParseCsvLineTimestamp(
       wxString::Format("2024-01-30T12:34:56.123Z,\"%s\"", msg), 0, 1, &nmea,
       &timestamp);
   EXPECT_TRUE(success);
@@ -302,7 +300,7 @@ TEST_F(VDRTimeTest, CSVParsingISO8601) {
   EXPECT_EQ(timestamp.GetSecond(), 56);
   EXPECT_EQ(timestamp.GetMillisecond(), 123);
 
-  success = parser.ParseCSVLineTimestamp(
+  success = parser.ParseCsvLineTimestamp(
       wxString::Format("2024-01-30T12:34:56Z,\"%s\"", msg), 0, 1, &nmea,
       &timestamp);
   EXPECT_TRUE(success);
@@ -330,7 +328,7 @@ TEST(TimestampParserTests, ParseISO8601) {
     EXPECT_EQ(dt.GetMinute(), 22);
     EXPECT_EQ(dt.GetSecond(), 11);
     EXPECT_EQ(dt.GetValue() / 1000,
-              1706948531 + 3600 * i);  // Seconds since epoch.
+              1706916131 + 3600 * i);  // Seconds since epoch.
   }
   {
     wxDateTime dt;
@@ -343,7 +341,7 @@ TEST(TimestampParserTests, ParseISO8601) {
     EXPECT_EQ(dt.GetMinute(), 22);
     EXPECT_EQ(dt.GetSecond(), 11);
     EXPECT_EQ(dt.GetMillisecond(), 123);
-    EXPECT_EQ(dt.GetValue(), 1706980931123);  // Milliseconds since epoch.
+    EXPECT_EQ(dt.GetValue(), 1706948531123);  // Milliseconds since epoch.
   }
   {
     wxDateTime dt;

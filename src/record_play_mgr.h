@@ -1,0 +1,727 @@
+/**************************************************************************
+ *   Copyright (C) 2011 by Jean-Eudes Onfray                               *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, see <https://www.gnu.org/licenses/>. *
+ **************************************************************************/
+
+#ifndef RECORD_PLAY_MGR_H_
+#define RECORD_PLAY_MGR_H_
+
+#include <cstdint>
+#include <deque>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "wx/wxprec.h"
+
+#ifndef WX_PRECOMP
+#include "wx/wx.h"
+#endif
+
+#include <wx/arrstr.h>
+#include <wx/aui/aui.h>
+#include <wx/bitmap.h>
+#include <wx/datetime.h>
+#include <wx/event.h>
+#include <wx/fileconf.h>
+#include <wx/file.h>
+#include <wx/string.h>
+#include <wx/textfile.h>
+#include <wx/timer.h>
+
+#include "commons.h"
+#include "config.h"
+#include "control_gui.h"
+#include "dm_replay_mgr.h"
+#include "ocpn_plugin.h"
+#include "vdr_network.h"
+#include "vdr_pi_time.h"
+
+wxDECLARE_EVENT(EVT_N2K, ObservedEvt);
+wxDECLARE_EVENT(EVT_SIGNALK, ObservedEvt);
+
+// Request default positioning of toolbar tool
+static constexpr int kVdrToolPosition = -1;
+
+/**
+ * Column definition for CSV format files.
+ *
+ * Describes the structure and requirements of fields in CSV format
+ * VDR files to support proper parsing during playback.
+ */
+struct CSVField {
+  wxString name;  //!< Field name in CSV header
+  int index;      //!< Zero-based column position in CSV file
+  bool required;  //!< Field must be present for valid playback.
+};
+
+class RecordPlayMgr {
+public:
+  /**
+   * Constructor
+   * @param parent Owning plugin implementation, owned by caller.
+   * @param control_gui VdrControlGui implementation, owned by caller.
+   */
+  RecordPlayMgr(opencpn_plugin* parent, VdrControlGui* control_gui);
+
+  void Init();
+
+  void DeInit();
+
+  void SetNMEASentence(wxString& sentence);
+  void SetAISSentence(wxString& sentence);
+
+  void SetControlGui(VdrControlGui* gui) { m_control_gui = gui; }
+
+  /** Load a VDR file containing NMEA data, either in raw NMEA format or CSV. */
+  bool LoadFile(const wxString& filename, wxString* error = nullptr);
+
+  /** Start playback of VDR data. */
+  void StartPlayback(wxString& file_status);
+
+  /** Pause playback of VDR data. */
+  void PausePlayback();
+
+  /** Stop playback of VDR data. */
+  void StopPlayback();
+
+  /** Return whether recording is currently active. */
+  bool IsRecording() const { return m_recording; }
+
+  /** Return whether recording is currently paused. */
+  bool IsRecordingPaused() const { return m_recording_paused; }
+
+  /** Return whether playback is currently active. */
+  bool IsPlaying() const;
+
+  /** Return whether the end of the playback file has been reached. */
+  bool IsAtFileEnd() const;
+
+  /** Return true if locking error encountered. */
+  bool IsError() const;
+
+  void ResetEndOfFile() { m_at_file_end = false; }
+
+  void SetColorScheme(PI_ColorScheme cs);
+
+  void ShowPreferencesDialog(wxWindow* parent);
+  void ShowPreferencesDialogNative(wxWindow* parent);
+
+  /** Update toolbar record and play buttons state. */
+  void SetToolbarToolStatus();
+
+  /** Get identifier for play button toolbar item. */
+  int GetPlayToolbarItemId() const { return m_tb_item_id_play; }
+
+  /**
+   * Scan loaded file for timestamp information.
+   *
+   * Analyzes file to determine if it contains valid timestamps and stores
+   * first/last timestamps if found. Required for proper playback timing.
+   *
+   * @param has_valid_timestamps True if valid timestamps found in file
+   * @param error Error message if an error occurs during scan.
+   * @return True if scan completed successfully, false if error occurred.
+   */
+  bool ScanFileTimestamps(bool& has_valid_timestamps, wxString& error);
+
+  /**
+   * Seek playback position to specified fraction of file.
+   *
+   * For files with timestamps, seeks to matching timestamp.
+   * For files without timestamps, seeks to line number.
+   * @param fraction Position as fraction between 0-1
+   * @return True if seek successful
+   */
+  bool SeekToFraction(double fraction);
+
+  /**
+   * Get current playback position as fraction of total.
+   *
+   * For files with timestamps, based on timestamp position.
+   * For files without timestamps, based online position.
+   * @return Position as fraction between 0-1
+   */
+  double GetProgressFraction() const;
+
+  /** Get timestamp of first message in file. */
+  wxDateTime GetFirstTimestamp() const { return m_first_timestamp; }
+
+  /** Get timestamp of last message in file. */
+  wxDateTime GetLastTimestamp() const { return m_last_timestamp; }
+
+  /** Get timestamp at current playback position. */
+  wxDateTime GetCurrentTimestamp() const;
+
+  /**
+   * Set timestamp for current playback position.
+   * @param timestamp New current timestamp
+   */
+  void SetCurrentTimestamp(const wxDateTime& timestamp) {
+    m_current_timestamp = timestamp;
+  }
+  /**
+   * Get path of currently loaded input file.
+   *
+   * Return empty string if no file loaded or file doesn't exist.
+   */
+  wxString GetInputFile() const;
+
+  /** Clear current input file reference and close file if open. */
+  void ClearInputFile();
+
+  /**
+   * Adjust playback timing based on speed multiplier setting.
+   *
+   * Update base time to maintain proper message timing when
+   * playback speed is changed.
+   */
+  void AdjustPlaybackBaseTime();
+
+  bool IsUsingLoopback() const {
+    return m_protocols.replay_mode == ReplayMode::kLoopback;
+  }
+
+  void OnToolbarToolCallback(int id);
+
+protected:
+  /**
+   * Check if current file contains at least one time source with valid message
+   * timestamps.
+   *
+   * The time source must have monotonically increasing timestamps for
+   * timestamp-based playback.
+   */
+  bool HasValidTimestamps() const;
+
+  /**
+   * Get details for all available time sources
+   * @return Map of time sources and their details
+   */
+  const std::unordered_map<TimeSource, TimeSourceDetails, TimeSourceHash>&
+  GetTimeSources() const {
+    return m_time_sources;
+  }
+
+  /**
+   * Get the next non-empty line from the input stream. Empty lines are skipped.
+   * A line is considered empty if it contains only whitespace.
+   *
+   * Lines starting with '#' are considered comments and are also skipped.
+   *
+   * @param from_start If true, starts reading from the beginning of the file.
+   *                 If false, continues from current position.
+   * @return The next non-empty line with leading/trailing whitespace removed,
+   *         or empty string if no more non-empty lines exist or file isn't
+   * open.
+   */
+  wxString GetNextNonEmptyLine(bool from_start = false);
+
+  /** Helper to flush the sentence buffer to NMEA stream. */
+  void FlushSentenceBuffer();
+
+  /**
+   * Set directory for storing VDR recordings.
+   * @param dir Path to recording directory
+   */
+  void SetRecordingDir(const wxString& dir) { m_recording_dir = dir; }
+
+  /**
+   * Set data format for VDR recording.
+   *
+   * If recording is active, stops current recording and starts new one with
+   * updated format.
+   * @param dataFormat New format to use for recording.
+   */
+  void SetDataFormat(VdrDataFormat dataFormat);
+
+  /**
+   * Enable or disable automatic log rotation.
+   * @param enable True to enable rotation
+   */
+  void SetLogRotate(bool enable) { m_log_rotate = enable; }
+
+  /** Start recording VDR data. */
+  void StartRecording();
+
+  /** Stop recording VDR data and close the VDR file. */
+  void StopRecording(const wxString& reason = "");
+
+private:
+  class VdrTimer : public wxTimer {
+  public:
+    explicit VdrTimer(RecordPlayMgr* plugin) : m_plugin(plugin) {}
+    void Notify() override { m_plugin->Notify(); }
+
+  private:
+    RecordPlayMgr* m_plugin;
+  };
+  bool LoadConfig();
+  bool SaveConfig();
+
+  /**
+   * Process timer notification for playback events.
+   *
+   * Handles timed playback of recorded data, managing message timing
+   * and maintaining playback state.
+   */
+  void Notify();
+
+  /** Resume recording using the same VDR file. */
+  void ResumeRecording();
+
+  /** Pause recording VDR data, retain the existing VDR file. */
+  void PauseRecording(const wxString& reason = "");
+
+  /** Get current data format setting for VDR output */
+  VdrDataFormat GetDataFormat() const { return m_data_format; }
+
+  /** Get configured recording directory. */
+  wxString GetRecordingDir() const { return m_recording_dir; }
+
+  /**
+   * Generate filename for new recording based on current UTC time.
+   *
+   * Creates filename in format: vdr_YYYYMMDDTHHMMSSz with appropriate
+   * extension.
+   */
+  wxString GenerateFilename() const;
+
+  /** Check if current recording file needs rotation based on elapsed time. */
+  void CheckLogRotation();
+
+  /** Get configured interval between log rotations in hours. */
+  int GetLogRotateInterval() const { return m_log_rotate_interval; }
+
+  /**
+   * Set interval for automatic log rotation.
+   * @param hours Hours between rotations
+   */
+  void SetLogRotateInterval(int hours) { m_log_rotate_interval = hours; }
+
+  /**
+   * Enable or disable automatic recording start.
+   * @param enable True to enable auto-start
+   */
+  void SetAutoStartRecording(bool enable) { m_auto_start_recording = enable; }
+
+  /**
+   * Enable or disable speed threshold for recording.
+   * @param enable True to enable threshold
+   */
+  void SetUseSpeedThreshold(bool enable) { m_use_speed_threshold = enable; }
+
+  /** Get configured speed threshold in knots. */
+  double GetSpeedThreshold() const { return m_speed_threshold; }
+
+  /**
+   * Set speed threshold for automatic recording.
+   * @param threshold Speed threshold in knots
+   */
+  void SetSpeedThreshold(double threshold) { m_speed_threshold = threshold; }
+
+  /** Get configured delay before stopping recording. */
+  int GetStopDelay() const { return m_stop_delay; }
+
+  /**
+   * Set delay before stopping recording when speed drops.
+   * @param minutes Minutes to wait before stopping
+   */
+  void SetStopDelay(int minutes) { m_stop_delay = minutes; }
+
+  /**
+   * Check if auto-recording should be started or stopped based on speed over
+   * ground.
+   *
+   * Starts recording when speed over ground exceeds threshold and stops
+   * recording after configured delay when speed drops below threshold.
+   * @param speed Current speed over ground in knots
+   */
+  void CheckAutoRecording(double speed);
+
+  /** Helper function to extract NMEA sentence components. */
+  static bool ParseNmeaComponents(wxString nmea, wxString& talker_id,
+                                  wxString& sentence_id, bool& has_timestamp);
+
+  /**
+   * Get the ConnectionSettings structure for a specific protocol.
+   *
+   * @param protocol Which protocol's settings to return
+   * @return Network settings for the specified protocol
+   */
+  const ConnectionSettings& GetNetworkSettings(const wxString& protocol) const;
+
+  /**
+   * Calculate when the current NMEA/SignalK message should be played during
+   * replay.
+   *
+   * This function determines the exact time when the current message should be
+   * displayed, accounting for the playback speed multiplier. The time returned
+   * is in terms of the computer's clock, not the original message timestamps.
+   *
+   * The calculation works by:
+   * 1. Finding how much time elapsed between the first message and current
+   * message
+   * 2. Scaling this elapsed time based on the playback speed (e.g. half-time at
+   * 2x speed)
+   * 3. Adding the scaled time to when playback started
+   *
+   * @return wxDateTime When to play the current message, relative to system
+   * time. Returns invalid wxDateTime if any required timestamps are invalid.
+   *
+   * @see GetSpeedMultiplier() - Controls how fast messages are replayed
+   */
+  wxDateTime GetNextPlaybackTime() const;
+
+  static wxString FormatNmea0183AsCsv(const wxString& nmea);
+
+  bool ParseCSVHeader(const wxString& header);
+
+  /** Parse timestamp from a CSV line or raw NMEA sentence. */
+  bool ParseCSVLineTimestamp(const wxString& line, wxString* messages,
+                             wxDateTime* timestamp);
+
+  /** Return true if the message is a NMEA0183 or AIS message */
+  static bool IsNmea0183OrAis(const wxString& message);
+
+  /** Update SignalK event listeners when preferences are changed. */
+  void UpdateSignalKListeners();
+
+  /** Update NMEA 2000 event listeners when preferences are changed. */
+  void UpdateNMEA2000Listeners();
+
+  /** Process incoming NMEA 2000 message from OpenCPN. */
+  void OnN2KEvent(wxCommandEvent& ev);
+
+  /** Process incoming SignalK message from OpenCPN. */
+  void OnSignalKEvent(wxCommandEvent& ev);
+
+  /** Helper to select the best primary time source. */
+  void SelectPrimaryTimeSource();
+
+  double GetSpeedMultiplier() const;
+
+  /**
+   * Get or create network server for a protocol.
+   *
+   * @param protocol Protocol identifier
+   * @return Pointer to server instance
+   */
+  VdrNetworkServer* GetServer(const wxString& protocol);
+
+  /**
+   * Parse a PCDIN message into its components
+   * Format: $PCDIN,<pgn>,<timestamp>,<src>,<data>
+   *
+   * @param message PCDIN message to parse
+   * @param pgn [out] PGN number
+   * @param source [out] Source address
+   * @param payload [out] Message payload
+   * @return True if parsing successful
+   */
+  bool ParsePCDINMessage(const wxString& message, int& pgn, wxString& source,
+                         wxString& payload);
+
+  /**
+   * Helper to extract PGN from NMEA 2000 message in any supported format.
+   *
+   * @param message NMEA 2000 message to parse
+   * @return PGN number or 0 if not recognized
+   */
+  int ExtractPGN(const wxString& message);
+
+  /**
+   * Initialize or update network servers based on current preferences.
+   *
+   * This function manages the lifecycle of NMEA0183 and NMEA2000 network
+   * servers. For each protocol:
+   * - If enabled in preferences, starts or reconfigures the server as needed
+   * - If disabled in preferences, stops any running server
+   * - Only reconfigures servers when settings have changed (protocol or port)
+   *
+   * The function is typically called when:
+   * - Starting playback
+   * - After preferences are updated
+   * - When reconnection is needed
+   *
+   * @return true if all enabled servers were started successfully, false if any
+   * server failed
+   * @note: Returns true if a server is disabled (not an error condition)
+   */
+  bool InitializeNetworkServers();
+
+  /**
+   * Stop all running network servers.
+   *
+   * This function performs a clean shutdown of all network servers:
+   * - Stops the NMEA0183 server if running
+   * - Stops the NMEA2000 server if running
+   * - Closes all client connections
+   * - Logs the shutdown of each server
+   *
+   * The function is typically called when:
+   * - Stopping playback
+   * - Shutting down the plugin
+   * - Before reconfiguring servers
+   *
+   * @note: This function is safe to call even if servers are not running
+   */
+  void StopNetworkServers();
+
+  /**
+   * Process and send data through appropriate network servers during playback.
+   *
+   * This function handles the routing of NMEA messages to the appropriate
+   * network server based on message type and protocol settings. It supports:
+   *
+   * NMEA0183:
+   * - Messages starting with '$' or '!'
+   * - Only sends if NMEA0183 networking is enabled
+   *
+   * NMEA2000:
+   * - SeaSmart format ($PCDIN)
+   * - Actisense ASCII format (!AIVDM)
+   * - MiniPlex format ($MXPGN)
+   * - YD RAW format ($YDRAW)
+   * - Only sends if NMEA2000 networking is enabled
+   *
+   * @param data The NMEA message to send
+   *        Each message should be a complete NMEA sentence including any line
+   * endings
+   *
+   */
+  void HandleNetworkPlayback(const wxString& data);
+
+  /** Handle message callback from dm_replay_mgr et al. */
+  static void OnVdrMsg(VdrMsgType type, std::string msg);
+
+  std::unique_ptr<DataMonitorReplayMgr> DmReplayMgrFactory();
+
+  int m_tb_item_id_record;
+  int m_tb_item_id_play;
+
+  std::unique_ptr<DataMonitorReplayMgr> m_dm_replay_mgr;
+
+  /** Configuration object for saving/loading settings. */
+  wxFileConfig* m_config;
+
+  /** Input filename for playback. */
+  wxString m_input_file;
+
+  /** Output filename for recording. */
+  wxString m_ofilename;
+
+  /** Directory where recordings are saved. */
+  wxString m_recording_dir;
+
+  int m_interval;
+
+  /** Flag indicating whether recording is active. */
+  bool m_recording;
+
+  /**
+   * Flag to track if recording is temporarily paused.
+   *
+   * Used to pause recording when speed over ground drops below
+   * the threshold and then rises above it again.
+   */
+  bool m_recording_paused;
+
+  /** Start time of the current recording session. */
+  wxDateTime m_current_recording_start;
+
+  /** When recording was last paused. */
+  wxDateTime m_recording_pause_time;
+
+  /** Flag indicating whether playback is active. */
+  bool m_playing;
+
+  /** Flag indicating whether end of file has been reached. */
+  bool m_at_file_end;
+
+  /** Current data format used for recording and playback. */
+  VdrDataFormat m_data_format;
+
+  /** Active protocol recording settings. */
+  VdrProtocolSettings m_protocols;
+
+  /** Network servers for each protocol */
+  std::map<wxString, std::unique_ptr<VdrNetworkServer>> m_network_servers;
+
+  /** Input file stream for playback. */
+  wxTextFile m_istream;
+
+  /** Output file stream for recording. */
+  wxFile m_ostream;
+
+  /** Plugin toolbar icon. */
+  wxBitmap m_panelBitmap;
+
+  /**
+   * Active NMEA 2000 message listeners.
+   *
+   * Each listener monitors specific PGN messages from the network.
+   */
+  std::vector<std::shared_ptr<ObservableListener>> m_n2k_listeners;
+
+  /**
+   * Active Signal K data listeners.
+   *
+   * Each listener monitors specific Signal K data paths.
+   */
+  std::vector<std::shared_ptr<ObservableListener>> m_signalk_listeners;
+
+  /** Flag indicating if current file is CSV format. */
+  bool m_is_csv_file;
+
+  /** Column headers when reading CSV format files. */
+  wxArrayString m_header_fields;
+
+  /**
+   * Index of timestamp column in CSV format.
+   *
+   * Set to -1 if timestamp column not found.
+   */
+  unsigned int m_timestamp_idx;
+
+  /**
+   * Index of NMEA message column in CSV format.
+   *
+   * Set to -1 if message column not found.
+   */
+  unsigned int m_message_idx;
+
+  /** Whether to automatically rotate log files. */
+  bool m_log_rotate;
+
+  /** Log rotation interval in hours. */
+  int m_log_rotate_interval;
+
+  /** When current recording started. */
+  wxDateTime m_recording_start;
+
+  /**
+   * System time when VDR playback was started.
+   *
+   * Used as the reference point for calculating when each message should be
+   * played. All playback times are calculated as an offset from this timestamp.
+   */
+  wxDateTime m_playback_base_time;
+
+  /**
+   * The first (earliest) timestamp from the primary time source in the VDR
+   * file.
+   */
+  wxDateTime m_first_timestamp;
+
+  /** The last timestamp from the primary time source in the VDR file. */
+  wxDateTime m_last_timestamp;
+
+  /** The current timestamp during VDR playback. */
+  wxDateTime m_current_timestamp;
+
+  /** Track whether file has valid timestamps. */
+  bool m_has_timestamps;
+
+  /**
+   * Configuration parameter to control whether auto-start recording is enabled
+   * or not.
+   *
+   * If enabled, recording will start automatically when the plugin is loaded.
+   * Optionally, there may be a speed threshold that must be met before
+   * recording starts.
+   */
+  bool m_auto_start_recording;
+
+  bool m_use_speed_threshold;  //!< Use speed threshold for auto recording.
+
+  /**
+   * Speed threshold for auto recording, in knots.
+   */
+  double m_speed_threshold;
+
+  /**
+   * Last known speed over ground, in knots.
+   *
+   * The speed is used to determine when to start and stop recording based on
+   * the configured speed threshold. The speed is received from:
+   * 1. The RMC sentence for NMEA 0183 recordings.
+   * 2. The SOG field in NMEA 2000 PGN 129026 messages.
+   */
+  double m_last_speed;
+
+  /**
+   * Indicate user has manually disabled recording while auto-recording was in
+   * progress.
+   *
+   * This flag is used to prevent auto-recording from starting again immediately
+   * after the user manually stops recording.
+   * If the user manually stops recording, auto-recording will only start again
+   * if the speed over ground drops below the threshold and then rises above it
+   * again.
+   */
+  bool m_recording_manually_disabled;
+
+  int m_stop_delay;  //!< Minutes to wait before stopping.
+
+  /** When speed first dropped below threshold. */
+  wxDateTime m_below_threshold_since;
+
+  /**
+   * Maximum number of NMEA sentences to retain until messages are dropped
+   * to maintain playback timing.
+   */
+  static constexpr int kMaxBufferSize = 1000;
+
+  /**
+   * Circular buffer for sentences.
+   * Used to store incoming NMEA sentences for playback, especially
+   * at high speeds where sentences may arrive faster than they can be played.
+   * At high replay speeds, some sentences may be skipped to maintain timing.
+   */
+  std::deque<wxString> m_sentence_buffer;
+
+  /** Flag indicating if messages have been dropped from the buffer. */
+  bool m_messages_dropped;
+
+  wxEvtHandler* m_event_handler;
+  VdrTimer* m_timer;
+  TimestampParser m_timestamp_parser;  //!< Helper for timestamp parsing
+
+  /**
+   * The set of time sources in the VDR recording.
+   * Each time source is identified by its NMEA sentence type, talker ID and
+   * precision.
+   */
+  std::unordered_map<TimeSource, TimeSourceDetails, TimeSourceHash>
+      m_time_sources;
+
+  /** The primary time source in the VDR recording. */
+  TimeSource m_primary_time_source;
+
+  bool m_has_primary_time_source;
+
+  opencpn_plugin* m_parent;
+  VdrControlGui* m_control_gui;
+
+#ifdef __ANDROID__
+  wxString m_temp_outfile;
+  wxString m_final_outfile;
+#endif
+};
+
+#endif
