@@ -43,13 +43,9 @@
 #include <wx/bitmap.h>
 #include <wx/string.h>
 
-#include "commons.h"
-#include "config.h"
-#include "dm_replay_mgr.h"
 #include "ocpn_plugin.h"
-#include "vdr_network.h"
+#include "record_play_mgr.h"
 #include "vdr_pi_control.h"
-#include "vdr_pi_time.h"
 
 /**
  *  Main plugin class handles the plugin API implementation and top level
