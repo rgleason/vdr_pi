@@ -1017,7 +1017,16 @@ void RecordPlayMgr::StopRecording(const wxString& reason) {
   m_recording = false;
 
 #ifdef __ANDROID__
-  bool AndroidSecureCopyFile(wxString in, wxString out);
+    bool AndroidSecureCopyFile(wxString in, wxString out);
+
+  // copy to "...files/VDR" directory, for local access
+  wxFileName fn = wxFileName(m_final_outfile);
+  wxString filename = fn.GetFullName();
+  wxString VDR_outfile = *GetpPrivateApplicationDataLocation();
+  VDR_outfile += wxString("/VDR/") + filename;
+  AndroidSecureCopyFile(m_temp_outfile, VDR_outfile);
+
+  // Copy to system area, e.g. ".../Documents"
   AndroidSecureCopyFile(m_temp_outfile, m_final_outfile);
   ::wxRemoveFile(m_temp_outfile);
 #endif
